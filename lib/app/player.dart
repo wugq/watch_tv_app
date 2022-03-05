@@ -1,6 +1,7 @@
 import 'package:fijkplayer/fijkplayer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import "package:auto_size_text/auto_size_text.dart";
 import 'package:get/get.dart';
 
 import '../data/channel.dart';
@@ -15,13 +16,16 @@ class Player extends StatefulWidget {
 class _PlayerState extends State<Player> {
   final FijkPlayer player = FijkPlayer();
 
+  String title = "国家地理";
+
   @override
   void initState() {
     super.initState();
-    player.setDataSource(
-      "http://iptv.tvfix.org/hls/natlgeo.m3u8",
-      autoPlay: true,
-    );
+    player
+        .setDataSource("http://iptv.tvfix.org/hls/natlgeo.m3u8", autoPlay: true)
+        .catchError((e) {
+      Get.snackbar("setDataSource error: ", e);
+    });
   }
 
   @override
@@ -34,7 +38,32 @@ class _PlayerState extends State<Player> {
   List<Channel> sourceList = [
     Channel("国家地理", "http://iptv.tvfix.org/hls/natlgeo.m3u8"),
     Channel("动物星球", "http://iptv.tvfix.org/hls/animal.m3u8"),
+    Channel("ViuTV", "http://iptv.tvfix.org/hls/viutv.m3u8"),
+    Channel("ViuTV(第2声道)", "http://iptv.tvfix.org/hls/viutv2.m3u8"),
+    Channel("ViuTV6", "http://iptv.tvfix.org/hls/viutv6.m3u8"),
+    Channel("香港国际财经台", "http://iptv.tvfix.org/hls/hkibc.m3u8"),
+    Channel("香港开电视", "http://iptv.tvfix.org/hls/opentv.m3u8"),
+    Channel("NHK WORLD(中文字幕)", "http://iptv.tvfix.org/hls/nhkworldzh.m3u8"),
+    Channel("Animax", "http://iptv.tvfix.org/hls/animax.m3u8"),
+    Channel("Animax(第2声道)", "http://iptv.tvfix.org/hls/animax2.m3u8"),
+    Channel("Hands Up Channel", "http://iptv.tvfix.org/hls/kid.m3u8"),
+    Channel("Hands Up Channel(第2声道)", "http://iptv.tvfix.org/hls/kid2.m3u8"),
+    Channel("Thrill", "http://iptv.tvfix.org/hls/thrill.m3u8"),
+    Channel("Thrill(第2声道)", "http://iptv.tvfix.org/hls/thrill2.m3u8"),
+    Channel("Discovery", "http://iptv.tvfix.org/hls/discovery.m3u8"),
+    Channel("动物星球(第2声道)", "http://iptv.tvfix.org/hls/animal2.m3u8"),
+    Channel("Love Nature 4K", "http://iptv.tvfix.org/hls/lovenature4k.m3u8"),
+    Channel("Love Nature 4K2", "http://iptv.tvfix.org/hls/lovenature4k2.m3u8"),
+    Channel("Channel V", "http://iptv.tvfix.org/hls/channelv.m3u8"),
+    Channel("星空卫视", "http://iptv.tvfix.org/hls/startv.m3u8"),
+    Channel("Star Sports", "http://iptv.tvfix.org/hls/starsports.m3u8"),
   ];
+
+  updateTitle(channelName) {
+    setState(() {
+      title = channelName;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +88,7 @@ class _PlayerState extends State<Player> {
           width: MediaQuery.of(context).size.width,
           color: Colors.teal[500],
           padding: const EdgeInsets.all(10),
-          child: const Text("电视"),
+          child: Text("正在观看：" + title),
         ),
         Expanded(
           child: Container(
@@ -75,20 +104,26 @@ class _PlayerState extends State<Player> {
               children: sourceList.map((Channel channel) {
                 return InkWell(
                   onTap: () async {
-                    Get.snackbar(channel.url, "hi");
+                    Get.snackbar("切换到", channel.name);
                     await player.reset();
-                    await player.setDataSource(channel.url, autoPlay: true);
+                    await player
+                        .setDataSource(channel.url, autoPlay: true)
+                        .catchError((e) {
+                      Get.snackbar("setDataSource error: ", e);
+                    });
+                    updateTitle(channel.name);
                   },
                   child: Container(
                     color: Colors.teal[200],
                     margin: const EdgeInsets.all(1.0),
                     child: Center(
-                      child: Text(
+                      child: AutoSizeText(
                         channel.name,
                         style: const TextStyle(
                           fontSize: 28.0,
                           color: Colors.white,
                         ),
+                        maxLines: 1,
                       ),
                     ),
                   ),
