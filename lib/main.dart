@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-// import 'package:flutter/services.dart';
 import 'package:tv/app/player.dart';
-import 'package:wakelock/wakelock.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  Wakelock.enable();
   runApp(const MyApp());
-  // SystemChrome.setSystemUIOverlayStyle(
-  //   const SystemUiOverlayStyle(statusBarColor: Colors.black26),
-  // );
 }
 
 class MyApp extends StatelessWidget {
