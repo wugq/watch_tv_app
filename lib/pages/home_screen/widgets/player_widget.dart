@@ -22,6 +22,7 @@ class PlayerWidget extends StatelessWidget {
         color: Colors.black,
         fit: fit,
         player: controller.player,
+        cover: Image.asset('assets/tv_cover.jpg').image,
       ),
     );
   }
