@@ -21,6 +21,7 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
 
   final FijkPlayer player = FijkPlayer();
   String title = "请选择电视台";
+  String playerStatus = "";
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -57,6 +58,38 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
     if (value.state == FijkState.started && value.size != null) {
       setVideoRatio(value.size!.width, value.size!.height);
     }
+
+    _setPlayerStatus(player.state);
+  }
+
+  void _setPlayerStatus(FijkState state) {
+    String statusName = "";
+    switch (state) {
+      case FijkState.initialized:
+        statusName = "初始化播放器";
+        break;
+      case FijkState.asyncPreparing:
+        statusName = "准备播放";
+        break;
+      case FijkState.prepared:
+        statusName = "正在缓冲";
+        break;
+      case FijkState.started:
+        statusName = "正在播放";
+        break;
+      case FijkState.paused:
+        statusName = "暂停播放";
+        break;
+      case FijkState.completed:
+        statusName = "播放完成";
+        break;
+      case FijkState.stopped:
+        statusName = "已停止";
+        break;
+    }
+    setState(() {
+      playerStatus = statusName;
+    });
   }
 
   @override
@@ -100,9 +133,7 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    var screenSize = MediaQuery
-        .of(context)
-        .size;
+    var screenSize = MediaQuery.of(context).size;
     FijkFit fit = FijkFit(
       sizeFactor: 1.0,
       aspectRatio: videoRatio,
@@ -119,21 +150,15 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
           ),
         ),
         Container(
-          width: MediaQuery
-              .of(context)
-              .size
-              .width,
+          width: MediaQuery.of(context).size.width,
           color: Colors.teal[500],
           padding: const EdgeInsets.all(10),
-          child: Text("正在观看：" + title),
+          child: Text(playerStatus + " " + title),
         ),
-        const CategorySelector(height: 40),
+        // const CategorySelector(height: 40),
         Expanded(
           child: Container(
-            width: MediaQuery
-                .of(context)
-                .size
-                .width,
+            width: MediaQuery.of(context).size.width,
             color: Colors.teal[600],
             child: GridView.count(
               padding: const EdgeInsets.all(10),
