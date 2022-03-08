@@ -24,6 +24,9 @@ class HomeScreenController extends FullLifeCycleController {
     for (var element in list) {
       sourceList.add(element);
     }
+    if (list.isNotEmpty) {
+      switchChannel(list[0]);
+    }
   }
 
   @override
