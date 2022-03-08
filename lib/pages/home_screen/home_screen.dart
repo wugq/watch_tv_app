@@ -26,7 +26,7 @@ class HomeScreen extends StatelessWidget {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            Get.to(const AddChannelScreen());
+            Get.to(() => const AddChannelScreen());
           },
           backgroundColor: const Color(0xFF7e7b7b),
           child: const Icon(Icons.add),

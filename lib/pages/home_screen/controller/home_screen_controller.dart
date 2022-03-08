@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tv/data/channel.dart';
-import 'package:tv/pages/add_channel_screen/controller/add_channel_controller.dart';
 
 class HomeScreenController extends FullLifeCycleController {
   final appLifecycleState = AppLifecycleState.resumed.obs;
@@ -14,30 +13,23 @@ class HomeScreenController extends FullLifeCycleController {
   var channelName = "请选择电视台".obs;
   var playerStatus = "".obs;
 
-  addChannel(Channel channel) {
-    sourceList.add(channel);
-  }
+  var sourceList = <Channel>[].obs;
 
-  List<Channel> sourceList = [
-    Channel(name: "国家地理", url: "http://iptv.tvfix.org/hls/natlgeo.m3u8"),
-    Channel(name: "Discovery", url: "http://iptv.tvfix.org/hls/discovery.m3u8"),
-    Channel(name: "动物星球", url: "http://iptv.tvfix.org/hls/animal.m3u8"),
-    Channel(name: "动物星球 2", url: "http://iptv.tvfix.org/hls/animal2.m3u8"),
-    Channel(
-        name: "Love Nature",
-        url: "http://iptv.tvfix.org/hls/lovenature4k.m3u8"),
-    Channel(
-        name: "Love Nature 2",
-        url: "http://iptv.tvfix.org/hls/lovenature4k2.m3u8"),
-    Channel(
-        name: "BBC World",
-        url:
-            "http://103.199.161.254/Content/bbcworld/Live/Channel(BBCworld)/index.m3u8")
-  ].obs;
+  initSourceList() {
+    addChannel( Channel(name: "国家地理", url: "http://iptv.tvfix.org/hls/natlgeo.m3u8"));
+    addChannel(Channel( name: "Discovery", url: "http://iptv.tvfix.org/hls/discovery.m3u8"));
+    addChannel( Channel(name: "动物星球", url: "http://iptv.tvfix.org/hls/animal.m3u8"));
+    addChannel( Channel(name: "动物星球 2", url: "http://iptv.tvfix.org/hls/animal2.m3u8"));
+    addChannel(Channel( name: "Love Nature", url: "http://iptv.tvfix.org/hls/lovenature4k.m3u8"));
+    addChannel(Channel( name: "Love Nature 2", url: "http://iptv.tvfix.org/hls/lovenature4k2.m3u8"));
+    addChannel(Channel( name: "BBC World", url: "http://103.199.161.254/Content/bbcworld/Live/Channel(BBCworld)/index.m3u8"));
+  }
 
   @override
   void onReady() {
     WidgetsBinding.instance?.addObserver(this);
+
+    initSourceList();
 
     player.setOption(FijkOption.hostCategory, "request-screen-on", 1);
     player.addListener(playerValueListener);
@@ -73,6 +65,10 @@ class HomeScreenController extends FullLifeCycleController {
     player.pause();
   }
 
+  void addChannel(Channel channel) {
+    sourceList.add(channel);
+  }
+
   String getTextOfPlayerState(FijkState state) {
     String stateName = "";
     switch (state) {
@@ -96,6 +92,15 @@ class HomeScreenController extends FullLifeCycleController {
         break;
       case FijkState.stopped:
         stateName = "已停止";
+        break;
+      case FijkState.idle:
+        stateName = "空闲";
+        break;
+      case FijkState.error:
+        stateName = "出错";
+        break;
+      case FijkState.end:
+        stateName = "结束";
         break;
     }
     return stateName;
