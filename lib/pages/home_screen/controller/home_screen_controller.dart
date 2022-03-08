@@ -75,6 +75,11 @@ class HomeScreenController extends FullLifeCycleController {
     channelDatabaseHelper.insertData(channel);
   }
 
+  void deleteChannel(Channel channel) {
+    sourceList.removeWhere((item) => item.key == channel.key);
+    channelDatabaseHelper.deleteData(channel.key);
+  }
+
   String getTextOfPlayerState(FijkState state) {
     String stateName = "";
     switch (state) {
