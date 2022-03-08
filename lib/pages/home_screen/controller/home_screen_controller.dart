@@ -2,7 +2,10 @@ import 'package:fijkplayer/fijkplayer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:tv/data/channel.dart';
+import 'package:tv/data/channel_database.dart';
+import 'package:tv/data/channel_database_helper.dart';
 
 class HomeScreenController extends FullLifeCycleController {
   final appLifecycleState = AppLifecycleState.resumed.obs;
@@ -13,23 +16,25 @@ class HomeScreenController extends FullLifeCycleController {
   var channelName = "请选择电视台".obs;
   var playerStatus = "".obs;
 
+  late ChannelDatabaseHelper channelDatabaseHelper;
   var sourceList = <Channel>[].obs;
 
-  initSourceList() {
-    addChannel( Channel(name: "国家地理", url: "http://iptv.tvfix.org/hls/natlgeo.m3u8"));
-    addChannel(Channel( name: "Discovery", url: "http://iptv.tvfix.org/hls/discovery.m3u8"));
-    addChannel( Channel(name: "动物星球", url: "http://iptv.tvfix.org/hls/animal.m3u8"));
-    addChannel( Channel(name: "动物星球 2", url: "http://iptv.tvfix.org/hls/animal2.m3u8"));
-    addChannel(Channel( name: "Love Nature", url: "http://iptv.tvfix.org/hls/lovenature4k.m3u8"));
-    addChannel(Channel( name: "Love Nature 2", url: "http://iptv.tvfix.org/hls/lovenature4k2.m3u8"));
-    addChannel(Channel( name: "BBC World", url: "http://103.199.161.254/Content/bbcworld/Live/Channel(BBCworld)/index.m3u8"));
+  loadSourceList() async {
+    List<Channel> list = await channelDatabaseHelper.showAllData();
+    for (var element in list) {
+      sourceList.add(element);
+    }
   }
 
   @override
-  void onReady() {
+  void onReady() async {
     WidgetsBinding.instance?.addObserver(this);
 
-    initSourceList();
+    Database channelDatabase = await ChannelDatabase.getDatabase();
+    channelDatabaseHelper = ChannelDatabaseHelper(channelDatabase);
+    // await channelDatabaseHelper.clearTable();
+    // await channelDatabaseHelper.addDemoData();
+    loadSourceList();
 
     player.setOption(FijkOption.hostCategory, "request-screen-on", 1);
     player.addListener(playerValueListener);
@@ -67,6 +72,7 @@ class HomeScreenController extends FullLifeCycleController {
 
   void addChannel(Channel channel) {
     sourceList.add(channel);
+    channelDatabaseHelper.insertData(channel);
   }
 
   String getTextOfPlayerState(FijkState state) {

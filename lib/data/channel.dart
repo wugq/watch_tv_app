@@ -21,4 +21,25 @@ class Channel {
   }) {
     key = CheckSum.sha1StringOf(name);
   }
+
+  Channel.fromObj({
+    required this.key,
+    required this.name,
+    required this.url,
+    required this.category,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'key': key,
+      'name': name,
+      'url': url,
+      'category': category,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'Channel {name: $name, url: $url, category: $category, key: $key}';
+  }
 }
