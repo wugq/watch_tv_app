@@ -21,8 +21,8 @@ class ChannelDatabaseHelper {
     });
   }
 
-  Future<void> insertData(Channel channel) async {
-    await database.insert(
+  Future<int> insertData(Channel channel) async {
+    return await database.insert(
       "CHANNELS",
       channel.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,

@@ -70,9 +70,9 @@ class HomeScreenController extends FullLifeCycleController {
     player.pause();
   }
 
-  void addChannel(Channel channel) {
+  Future<int> addChannel(Channel channel) async {
     sourceList.add(channel);
-    channelDatabaseHelper.insertData(channel);
+    return await channelDatabaseHelper.insertData(channel);
   }
 
   void deleteChannel(Channel channel) {

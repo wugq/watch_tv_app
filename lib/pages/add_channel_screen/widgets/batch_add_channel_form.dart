@@ -3,17 +3,16 @@ import 'package:get/get.dart';
 import 'package:tv/pages/add_channel_screen/controller/add_channel_controller.dart';
 import 'package:tv/pages/add_channel_screen/widgets/input_text_widget.dart';
 
-class AddChannelForm extends StatefulWidget {
-  const AddChannelForm({Key? key}) : super(key: key);
+class BatchAddChannelForm extends StatefulWidget {
+  const BatchAddChannelForm({Key? key}) : super(key: key);
 
   @override
-  State<AddChannelForm> createState() => _AddChannelFormState();
+  State<BatchAddChannelForm> createState() => _BatchAddChannelFormState();
 }
 
-class _AddChannelFormState extends State<AddChannelForm> {
+class _BatchAddChannelFormState extends State<BatchAddChannelForm> {
   final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController();
-  final _url = TextEditingController();
+  final _text = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -27,28 +26,21 @@ class _AddChannelFormState extends State<AddChannelForm> {
           shrinkWrap: true,
           children: [
             InputTextWidget(
-              inputController: _name,
-              validatorText: 'You have to input a channel name',
-              hintText: 'Channel Name',
-              isMultiLine: false,
-            ),
-            const SizedBox(height: 20),
-            InputTextWidget(
-              inputController: _url,
-              validatorText: 'You have to input a channel URL',
-              hintText: 'Channel URL',
-              isMultiLine: false,
+              inputController: _text,
+              validatorText: 'You have to input channel name',
+              hintText:
+                  'Name, http://domain/stream.m3u8\nName, http://domain/stream.m3u8',
+              isMultiLine: true,
             ),
             const SizedBox(height: 20),
             OutlinedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (!_formKey.currentState!.validate()) {
                   return;
                 }
-
-                controller.addChannel(_name.text, _url.text);
+                await controller.batchAddChannel(_text.text);
                 Get.back();
-                Get.snackbar("add channel", _name.text);
+                Get.snackbar("batch add channel", "");
               },
               child: const Text("Save"),
               style: OutlinedButton.styleFrom(
