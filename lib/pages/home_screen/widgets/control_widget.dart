@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tv/data/channel.dart';
 import 'package:tv/pages/home_screen/controller/home_screen_controller.dart';
+import 'package:tv/pages/home_screen/widgets/control/category_item_widget.dart';
 
 class ControlWidget extends StatelessWidget {
   const ControlWidget({Key? key}) : super(key: key);
@@ -21,35 +22,8 @@ class ControlWidget extends StatelessWidget {
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
           crossAxisCount: 2,
-          // shrinkWrap: true,
           children: controller.sourceList.map((Channel channel) {
-            return InkWell(
-              onTap: () {
-                controller.switchChannel(channel);
-              },
-              child: Container(
-                margin: const EdgeInsets.all(1.0),
-                padding: const EdgeInsets.only(right: 20, left: 20),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF373542),
-                  borderRadius: BorderRadius.all(
-                    Radius.circular(5),
-                  ),
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    channel.name,
-                    style: const TextStyle(
-                      fontSize: 20.0,
-                      color: Color(0xFFfdfef5),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-            );
+            return CategoryItemWidget(channel: channel);
           }).toList(),
         ),
       ),
