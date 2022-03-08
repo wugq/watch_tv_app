@@ -14,7 +14,7 @@ class ControlWidget extends StatelessWidget {
     return Expanded(
       child: Container(
         width: Get.width,
-        color: Colors.teal[600],
+        color: const Color(0xFF2c2a38),
         child: GridView.count(
           padding: const EdgeInsets.all(10),
           childAspectRatio: 16 / 6,
@@ -28,16 +28,24 @@ class ControlWidget extends StatelessWidget {
                 controller.switchChannel(channel);
               },
               child: Container(
-                color: Colors.teal[200],
                 margin: const EdgeInsets.all(1.0),
-                child: Center(
-                  child: AutoSizeText(
+                padding: const EdgeInsets.only(right: 20, left: 20),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF373542),
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(5),
+                  ),
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
                     channel.name,
                     style: const TextStyle(
-                      fontSize: 28.0,
-                      color: Colors.white,
+                      fontSize: 20.0,
+                      color: Color(0xFFfdfef5),
                     ),
                     maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),

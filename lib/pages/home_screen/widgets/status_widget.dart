@@ -11,10 +11,16 @@ class StatusWidget extends StatelessWidget {
 
     return Container(
       width: Get.width,
-      color: Colors.teal[500],
+      color: const Color(0xFF42424e),
       padding: const EdgeInsets.all(10),
       child: Obx(
-          () => Text("${controller.playerStatus} ${controller.channelName}")),
+        () => Text(
+          "${controller.playerStatus} ${controller.channelName}",
+          style: const TextStyle(
+            color: Color(0xFFfffff8),
+          ),
+        ),
+      ),
     );
   }
 }
