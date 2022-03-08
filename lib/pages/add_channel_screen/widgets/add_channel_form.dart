@@ -41,12 +41,12 @@ class _AddChannelFormState extends State<AddChannelForm> {
             ),
             const SizedBox(height: 20),
             OutlinedButton(
-              onPressed: () {
+              onPressed: () async {
                 if (!_formKey.currentState!.validate()) {
                   return;
                 }
 
-                controller.addChannel(_name.text, _url.text);
+                await controller.addChannel(_name.text, _url.text);
                 Get.back();
                 Get.snackbar("add channel", _name.text);
               },
