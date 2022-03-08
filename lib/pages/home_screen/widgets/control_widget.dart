@@ -16,15 +16,17 @@ class ControlWidget extends StatelessWidget {
       child: Container(
         width: Get.width,
         color: const Color(0xFF2c2a38),
-        child: GridView.count(
-          padding: const EdgeInsets.all(10),
-          childAspectRatio: 16 / 6,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          crossAxisCount: 2,
-          children: controller.sourceList.map((Channel channel) {
-            return CategoryItemWidget(channel: channel);
-          }).toList(),
+        child: Obx(
+          () => GridView.count(
+            padding: const EdgeInsets.all(10),
+            childAspectRatio: 16 / 6,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            crossAxisCount: 2,
+            children: controller.sourceList.map((Channel channel) {
+              return CategoryItemWidget(channel: channel);
+            }).toList(),
+          ),
         ),
       ),
     );

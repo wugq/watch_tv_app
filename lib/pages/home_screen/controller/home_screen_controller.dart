@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tv/data/channel.dart';
+import 'package:tv/pages/add_channel_screen/controller/add_channel_controller.dart';
 
 class HomeScreenController extends FullLifeCycleController {
   final appLifecycleState = AppLifecycleState.resumed.obs;
@@ -13,16 +14,26 @@ class HomeScreenController extends FullLifeCycleController {
   var channelName = "请选择电视台".obs;
   var playerStatus = "".obs;
 
+  addChannel(Channel channel) {
+    sourceList.add(channel);
+  }
+
   List<Channel> sourceList = [
-    Channel("国家地理", "http://iptv.tvfix.org/hls/natlgeo.m3u8"),
-    Channel("Discovery", "http://iptv.tvfix.org/hls/discovery.m3u8"),
-    Channel("动物星球", "http://iptv.tvfix.org/hls/animal.m3u8"),
-    Channel("动物星球 2", "http://iptv.tvfix.org/hls/animal2.m3u8"),
-    Channel("Love Natureaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "http://iptv.tvfix.org/hls/lovenature4k.m3u8"),
-    Channel("Love Nature 2", "http://iptv.tvfix.org/hls/lovenature4k2.m3u8"),
-    Channel("BBC World",
-        "http://103.199.161.254/Content/bbcworld/Live/Channel(BBCworld)/index.m3u8")
-  ];
+    Channel(name: "国家地理", url: "http://iptv.tvfix.org/hls/natlgeo.m3u8"),
+    Channel(name: "Discovery", url: "http://iptv.tvfix.org/hls/discovery.m3u8"),
+    Channel(name: "动物星球", url: "http://iptv.tvfix.org/hls/animal.m3u8"),
+    Channel(name: "动物星球 2", url: "http://iptv.tvfix.org/hls/animal2.m3u8"),
+    Channel(
+        name: "Love Nature",
+        url: "http://iptv.tvfix.org/hls/lovenature4k.m3u8"),
+    Channel(
+        name: "Love Nature 2",
+        url: "http://iptv.tvfix.org/hls/lovenature4k2.m3u8"),
+    Channel(
+        name: "BBC World",
+        url:
+            "http://103.199.161.254/Content/bbcworld/Live/Channel(BBCworld)/index.m3u8")
+  ].obs;
 
   @override
   void onReady() {

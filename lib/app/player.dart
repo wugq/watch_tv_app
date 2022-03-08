@@ -109,14 +109,7 @@ class _PlayerState extends State<Player> with WidgetsBindingObserver {
   }
 
   List<Channel> sourceList = [
-    Channel("国家地理", "http://iptv.tvfix.org/hls/natlgeo.m3u8"),
-    Channel("Discovery", "http://iptv.tvfix.org/hls/discovery.m3u8"),
-    Channel("动物星球", "http://iptv.tvfix.org/hls/animal.m3u8"),
-    Channel("动物星球 2", "http://iptv.tvfix.org/hls/animal2.m3u8"),
-    Channel("Love Nature", "http://iptv.tvfix.org/hls/lovenature4k.m3u8"),
-    Channel("Love Nature 2", "http://iptv.tvfix.org/hls/lovenature4k2.m3u8"),
-    Channel("BBC World",
-        "http://103.199.161.254/Content/bbcworld/Live/Channel(BBCworld)/index.m3u8")
+    Channel(name: "国家地理", url: "http://iptv.tvfix.org/hls/natlgeo.m3u8"),
   ];
 
   updateTitle(channelName) {
