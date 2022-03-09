@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tv/pages/add_channel_screen/add_channel_screen.dart';
+import 'package:tv/pages/add_channel_screen/batch_add_channel_screen.dart';
 import 'package:tv/pages/add_channel_screen/controller/add_channel_controller.dart';
 import 'package:tv/pages/home_screen/controller/home_screen_controller.dart';
 import 'package:tv/pages/home_screen/widgets/control_widget.dart';
@@ -26,7 +27,7 @@ class HomeScreen extends StatelessWidget {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            Get.to(() => const AddChannelScreen());
+            Get.to(() => const BatchAddChannelScreen());
           },
           backgroundColor: const Color(0xFF7e7b7b),
           child: const Icon(Icons.add),

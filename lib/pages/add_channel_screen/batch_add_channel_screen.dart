@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:tv/pages/add_channel_screen/add_channel_screen.dart';
 import 'package:tv/pages/add_channel_screen/controller/add_channel_controller.dart';
 import 'package:tv/pages/add_channel_screen/widgets/batch_add_channel_form.dart';
 import 'package:tv/pages/home_screen/controller/home_screen_controller.dart';
@@ -15,6 +16,15 @@ class BatchAddChannelScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Batch Add Channel"),
         backgroundColor: const Color(0xFF42424e),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: 'Add Channel',
+            onPressed: () {
+              Get.off(() => const AddChannelScreen());
+            },
+          ),
+        ],
       ),
       body: Container(
         color: const Color(0xFF2c2a38),

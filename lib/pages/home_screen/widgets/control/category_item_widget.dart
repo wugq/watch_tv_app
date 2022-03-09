@@ -8,13 +8,13 @@ class CategoryItemWidget extends StatelessWidget {
 
   const CategoryItemWidget({Key? key, required this.channel}) : super(key: key);
 
-  Future<bool> confirmDismissFn(BuildContext context) async {
+  Future<bool> confirmDismissFn(BuildContext context, Channel channel) async {
     return await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Confirm"),
-          content: const Text("Are you sure you wish to delete this channel?"),
+          content: Text("Are you sure you wish to delete ${channel.name} ?"),
           actions: <Widget>[
             TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
@@ -39,7 +39,7 @@ class CategoryItemWidget extends StatelessWidget {
         controller.deleteChannel(channel);
       },
       confirmDismiss: (DismissDirection direction) async {
-        return confirmDismissFn(context);
+        return confirmDismissFn(context, channel);
       },
       child: InkWell(
         onTap: () {
