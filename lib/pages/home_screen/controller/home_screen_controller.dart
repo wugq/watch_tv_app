@@ -147,7 +147,7 @@ class HomeScreenController extends FullLifeCycleController {
   }
 
   void switchChannel(Channel channel) async {
-    Get.snackbar("切换到", channel.name);
+    Get.snackbar("Switch To", channel.name);
     await player.reset();
     await player.setDataSource(channel.url, autoPlay: true).catchError((e) {
       Get.snackbar("setDataSource error: ", e);

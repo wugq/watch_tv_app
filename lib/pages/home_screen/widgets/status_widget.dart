@@ -13,13 +13,26 @@ class StatusWidget extends StatelessWidget {
       width: Get.width,
       color: const Color(0xFF42424e),
       padding: const EdgeInsets.all(10),
-      child: Obx(
-        () => Text(
-          "${controller.playerStatus} ${controller.channelName}",
-          style: const TextStyle(
-            color: Color(0xFFfffff8),
+      child: Row(
+        children: [
+          Obx(
+            () => Text(
+              "${controller.channelName}",
+              style: const TextStyle(
+                color: Color(0xFFfffff8),
+              ),
+            ),
           ),
-        ),
+          const Spacer(), // use Spacer
+          Obx(
+            () => Text(
+              "Status: ${controller.playerStatus}",
+              style: const TextStyle(
+                color: Color(0xFFfffff8),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
