@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="dev.wugq.tv">
    <application
-        android:label="睇电视"
+        android:label="WatchTV"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

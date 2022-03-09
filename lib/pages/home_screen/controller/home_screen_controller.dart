@@ -13,8 +13,8 @@ class HomeScreenController extends FullLifeCycleController {
   final FijkPlayer player = FijkPlayer();
   var videoRatio = 1.7777.obs;
 
-  var channelName = "请选择电视台".obs;
-  var playerStatus = "".obs;
+  var channelName = "Please Select a Channel".obs;
+  var playerStatus = "idle".obs;
 
   late ChannelDatabaseHelper channelDatabaseHelper;
   var sourceList = <Channel>[].obs;
@@ -87,34 +87,44 @@ class HomeScreenController extends FullLifeCycleController {
     String stateName = "";
     switch (state) {
       case FijkState.initialized:
-        stateName = "初始化播放器";
+        // stateName = "初始化播放器";
+        stateName = "initialized";
         break;
       case FijkState.asyncPreparing:
-        stateName = "准备播放";
+        // stateName = "准备播放";
+        stateName = "preparing";
         break;
       case FijkState.prepared:
-        stateName = "正在缓冲";
+        // stateName = "正在缓冲";
+        stateName = "prepared";
         break;
       case FijkState.started:
-        stateName = "正在播放";
+        // stateName = "正在播放";
+        stateName = "playing";
         break;
       case FijkState.paused:
-        stateName = "暂停播放";
+        // stateName = "暂停播放";
+        stateName = "paused";
         break;
       case FijkState.completed:
-        stateName = "播放完成";
+        // stateName = "播放完成";
+        stateName = "completed";
         break;
       case FijkState.stopped:
-        stateName = "已停止";
+        // stateName = "已停止";
+        stateName = "stopped";
         break;
       case FijkState.idle:
-        stateName = "空闲";
+        // stateName = "空闲";
+        stateName = "idle";
         break;
       case FijkState.error:
-        stateName = "出错";
+        // stateName = "出错";
+        stateName = "error";
         break;
       case FijkState.end:
-        stateName = "结束";
+        // stateName = "结束";
+        stateName = "end";
         break;
     }
     return stateName;
