@@ -10,10 +10,11 @@ class StatusWidget extends StatelessWidget {
     var controller = Get.find<HomeScreenController>();
 
     return Container(
-      width: Get.width,
+      width: MediaQuery.of(context).size.width,
       color: const Color(0xFF42424e),
       padding: const EdgeInsets.all(10),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Obx(
             () => Text(
@@ -23,10 +24,9 @@ class StatusWidget extends StatelessWidget {
               ),
             ),
           ),
-          const Spacer(), // use Spacer
           Obx(
             () => Text(
-              "Status: ${controller.playerStatus}",
+              "status: ${controller.playerStatus}",
               style: const TextStyle(
                 color: Color(0xFFfffff8),
               ),

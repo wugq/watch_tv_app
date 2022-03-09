@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tv/data/channel.dart';
 import 'package:tv/pages/home_screen/controller/home_screen_controller.dart';

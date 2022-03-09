@@ -13,7 +13,7 @@ class ControlWidget extends StatelessWidget {
 
     return Expanded(
       child: Container(
-        width: Get.width,
+        width: MediaQuery.of(context).size.width,
         color: const Color(0xFF2c2a38),
         child: Obx(
           () => GridView.count(
@@ -22,6 +22,7 @@ class ControlWidget extends StatelessWidget {
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
             crossAxisCount: 2,
+            shrinkWrap: true,
             children: controller.sourceList.map((Channel channel) {
               return CategoryItemWidget(channel: channel);
             }).toList(),

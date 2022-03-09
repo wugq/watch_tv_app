@@ -13,7 +13,7 @@ class HomeScreenController extends FullLifeCycleController {
   final FijkPlayer player = FijkPlayer();
   var videoRatio = 1.7777.obs;
 
-  var channelName = "Please Select a Channel".obs;
+  var channelName = "Please select a channel".obs;
   var playerStatus = "idle".obs;
 
   late ChannelDatabaseHelper channelDatabaseHelper;
@@ -69,7 +69,9 @@ class HomeScreenController extends FullLifeCycleController {
   }
 
   void playerPause() {
-    player.pause();
+    if (player.state == FijkState.started) {
+      player.pause();
+    }
   }
 
   Future<int> addChannel(Channel channel) async {

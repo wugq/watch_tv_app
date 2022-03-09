@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tv/pages/add_channel_screen/add_channel_screen.dart';
 import 'package:tv/pages/add_channel_screen/batch_add_channel_screen.dart';
 import 'package:tv/pages/add_channel_screen/controller/add_channel_controller.dart';
 import 'package:tv/pages/home_screen/controller/home_screen_controller.dart';

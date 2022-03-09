@@ -17,7 +17,7 @@ class PlayerWidget extends StatelessWidget {
     );
 
     return SizedBox(
-      height: Get.width / controller.videoRatio.value,
+      height: MediaQuery.of(context).size.width / controller.videoRatio.value,
       child: FijkView(
         color: Colors.black,
         fit: fit,

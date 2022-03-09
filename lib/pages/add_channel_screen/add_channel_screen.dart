@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:tv/pages/add_channel_screen/batch_add_channel_screen.dart';
 import 'package:tv/pages/add_channel_screen/controller/add_channel_controller.dart';
 import 'package:tv/pages/add_channel_screen/widgets/add_channel_form.dart';
-import 'package:tv/pages/add_channel_screen/widgets/input_text_widget.dart';
 import 'package:tv/pages/home_screen/controller/home_screen_controller.dart';
 
 class AddChannelScreen extends StatelessWidget {
