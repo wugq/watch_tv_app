@@ -36,7 +36,6 @@ class HomeScreenController extends FullLifeCycleController {
     Database channelDatabase = await ChannelDatabase.getDatabase();
     channelDatabaseHelper = ChannelDatabaseHelper(channelDatabase);
     // await channelDatabaseHelper.clearTable();
-    // await channelDatabaseHelper.addDemoData();
     loadSourceList();
 
     player.setOption(FijkOption.hostCategory, "request-screen-on", 1);
