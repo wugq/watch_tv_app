@@ -6,11 +6,9 @@ Watch your live stream with WatchTV app. This app DOES NOT provide any live stre
 
 Add a live stream channel to this app and start watching.
 
-![Screen](./screen_shots/Screenshot_20220309-100404.png)
-
-![Screen](./screen_shots/Screenshot_20220309-100210.png)
-
-![Screen](./screen_shots/Screenshot_20220309-100347.png)
+| Main Screen                                              | Add multiple Channels                                    | Add a channel                                            |
+|:--------------------------------------------------------:|:--------------------------------------------------------:|:--------------------------------------------------------:|
+| ![Screen](./screen_shots/Screenshot_20220309-100404.png) | ![Screen](./screen_shots/Screenshot_20220309-100347.png) | ![Screen](./screen_shots/Screenshot_20220309-100210.png) |
 
 ## Tech stack
 
