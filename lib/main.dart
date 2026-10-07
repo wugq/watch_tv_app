@@ -1,32 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:wakelock/wakelock.dart';
+import 'package:tv/app/app.dart';
+import 'package:tv/data/repositories/channel_repository.dart';
+import 'package:tv/data/sources/channel_database.dart';
 
-import 'package:tv/pages/add_channel_screen/controller/add_channel_controller.dart';
-import 'package:tv/pages/home_screen/controller/home_screen_controller.dart';
-import 'package:tv/pages/home_screen/home_screen.dart';
-
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  Wakelock.enable();
-  runApp(const MyApp());
+  final database = await ChannelDatabase.open();
+  Get.put<ChannelRepository>(
+    SqfliteChannelRepository(database),
+    permanent: true,
+  );
+  runApp(const WatchTvApp());
 }
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    Get.lazyPut(() => HomeScreenController());
-    Get.lazyPut(() => AddChannelController());
-
-    return GetMaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const HomeScreen(),
-    );
-  }
-}
-
