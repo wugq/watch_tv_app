@@ -42,6 +42,9 @@ sources by hand.
 
 Long-press a channel, or use its menu, to edit or delete it.
 
+Plain `http://` streams are allowed: `android:usesCleartextTraffic="true"` on
+Android and `NSAllowsArbitraryLoadsForMedia` (media playback only) on iOS.
+
 ## Tech stack
 
 * [Flutter](https://flutter.dev/) 3.47 (Dart 3.13), Material 3 with light and dark theme
