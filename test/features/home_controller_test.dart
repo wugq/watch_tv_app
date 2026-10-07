@@ -8,8 +8,16 @@ import '../helpers/fakes.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final news = Channel.create(name: 'A', url: 'http://x/a', category: 'News');
-  final sport = Channel.create(name: 'B', url: 'http://x/b', category: 'Sport');
+  final news = Channel.create(
+    name: 'A',
+    urls: ['http://x/a'],
+    category: 'News',
+  );
+  final sport = Channel.create(
+    name: 'B',
+    urls: ['http://x/b'],
+    category: 'Sport',
+  );
 
   late FakePlayerController player;
   late HomeController controller;

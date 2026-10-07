@@ -1,49 +1,59 @@
 import 'package:tv/core/checksum.dart';
 
-/// A live stream channel.
+/// A live stream channel with one or more stream sources.
 ///
-/// [key] is the SHA-1 of [name]. It is the primary key in the database, so
-/// two channels with the same name replace each other.
+/// [key] is the SHA-1 of [name]. Channels with the same name are the same
+/// channel, so importing a list with repeated names adds sources to one
+/// channel instead of creating duplicates.
 class Channel {
   static const defaultCategory = 'default';
 
   final String key;
   final String name;
-  final String url;
   final String category;
 
-  const Channel({
+  /// Stream URLs in order of preference. Never empty.
+  final List<String> urls;
+
+  Channel({
     required this.key,
     required this.name,
-    required this.url,
     required this.category,
-  });
+    required List<String> urls,
+  }) : assert(urls.isNotEmpty),
+       urls = List.unmodifiable(urls);
 
   factory Channel.create({
     required String name,
-    required String url,
+    required List<String> urls,
     String? category,
   }) {
     final trimmedCategory = category?.trim() ?? '';
     return Channel(
       key: sha1Of(name),
       name: name,
-      url: url,
       category: trimmedCategory.isEmpty ? defaultCategory : trimmedCategory,
+      urls: _unique(urls),
     );
   }
 
-  factory Channel.fromMap(Map<String, Object?> map) {
+  /// Returns a copy with the sources of [other] appended (duplicates
+  /// skipped) and the category of [other].
+  Channel merge(Channel other) {
     return Channel(
-      key: map['key'] as String,
-      name: map['name'] as String,
-      url: map['url'] as String,
-      category: (map['category'] as String?) ?? defaultCategory,
+      key: key,
+      name: name,
+      category: other.category,
+      urls: _unique([...urls, ...other.urls]),
     );
   }
 
-  Map<String, Object?> toMap() {
-    return {'key': key, 'name': name, 'url': url, 'category': category};
+  static List<String> _unique(Iterable<String> urls) {
+    final seen = <String>{};
+    return [
+      for (final url in urls.map((u) => u.trim()))
+        if (url.isNotEmpty && seen.add(url)) url,
+    ];
   }
 
   @override
@@ -51,15 +61,23 @@ class Channel {
     return other is Channel &&
         other.key == key &&
         other.name == name &&
-        other.url == url &&
-        other.category == category;
+        other.category == category &&
+        _listEquals(other.urls, urls);
   }
 
   @override
-  int get hashCode => Object.hash(key, name, url, category);
+  int get hashCode => Object.hash(key, name, category, Object.hashAll(urls));
 
   @override
   String toString() {
-    return 'Channel(name: $name, url: $url, category: $category, key: $key)';
+    return 'Channel(name: $name, category: $category, urls: $urls)';
+  }
+
+  static bool _listEquals(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 }

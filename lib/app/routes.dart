@@ -28,6 +28,7 @@ final appPages = [
       Get.put(
         ChannelEditorController(
           Get.find(),
+          Get.find(),
           original: argument is Channel ? argument : null,
         ),
       );

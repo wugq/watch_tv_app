@@ -32,9 +32,10 @@ class BatchChannelForm extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'One channel per line: "Name, URL". '
+                      'One source per line: "Name, URL". '
                       'A "Category,#genre#" line starts a new category. '
-                      'M3U playlists are also supported.',
+                      'Lines with the same name become one channel with '
+                      'several sources. M3U is also supported.',
                       style: theme.textTheme.bodySmall,
                     ),
                   ),

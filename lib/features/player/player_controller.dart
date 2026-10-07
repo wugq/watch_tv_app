@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
@@ -27,7 +29,13 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     : _createVideoController =
           createVideoController ?? VideoPlayerController.networkUrl;
 
+  /// How long a source may take to start before the next one is tried.
+  static const openTimeout = Duration(seconds: 20);
+
   final channel = Rxn<Channel>();
+
+  /// Index of the playing source in `channel.urls`.
+  final sourceIndex = 0.obs;
   final status = PlaybackStatus.idle.obs;
   final errorMessage = RxnString();
   final video = Rxn<VideoPlayerController>();
@@ -35,6 +43,9 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   /// Increases on every [play] call, so a slow `initialize()` of an older
   /// channel does not override the newer one.
   int _generation = 0;
+
+  /// Sources that failed since the last successful start.
+  int _failuresInRow = 0;
 
   double get aspectRatio {
     final value = video.value?.value;
@@ -67,26 +78,54 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     }
   }
 
-  Future<void> play(Channel newChannel) async {
+  /// Plays [newChannel], starting with source [source]. When a source
+  /// fails, the next one is tried until every source failed once.
+  Future<void> play(Channel newChannel, {int source = 0}) async {
+    _failuresInRow = 0;
+    await _open(newChannel, source.clamp(0, newChannel.urls.length - 1));
+  }
+
+  /// Switches the current channel to its next source.
+  Future<void> nextSource() async {
+    final current = channel.value;
+    if (current != null && current.urls.length > 1) {
+      await play(
+        current,
+        source: (sourceIndex.value + 1) % current.urls.length,
+      );
+    }
+  }
+
+  Future<void> retry() async {
+    final current = channel.value;
+    if (current != null) {
+      await play(current, source: sourceIndex.value);
+    }
+  }
+
+  Future<void> _open(Channel newChannel, int index) async {
     final generation = ++_generation;
     _disposeVideo();
     channel.value = newChannel;
+    sourceIndex.value = index;
     errorMessage.value = null;
     status.value = PlaybackStatus.loading;
 
-    final uri = Uri.tryParse(newChannel.url);
+    final uri = Uri.tryParse(newChannel.urls[index]);
     if (uri == null) {
-      _setError('Invalid URL: ${newChannel.url}');
+      _onSourceFailed('Invalid URL');
       return;
     }
 
     final controller = _createVideoController(uri);
     video.value = controller;
     try {
-      await controller.initialize();
+      await controller.initialize().timeout(openTimeout);
     } catch (e) {
       if (generation == _generation) {
-        _setError('Cannot open stream');
+        _onSourceFailed(
+          e is TimeoutException ? 'Stream timed out' : 'Cannot open stream',
+        );
       }
       return;
     }
@@ -98,11 +137,15 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     video.refresh();
   }
 
-  Future<void> retry() async {
+  void _onSourceFailed(String message) {
     final current = channel.value;
-    if (current != null) {
-      await play(current);
+    _failuresInRow++;
+    if (current != null && _failuresInRow < current.urls.length) {
+      _open(current, (sourceIndex.value + 1) % current.urls.length);
+      return;
     }
+    final count = current?.urls.length ?? 0;
+    _setError(count > 1 ? '$message (all $count sources failed)' : message);
   }
 
   Future<void> stop() async {
@@ -137,7 +180,15 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       return;
     }
     if (value.hasError) {
-      _setError(value.errorDescription ?? 'Playback error');
+      // Called from the controller's notifyListeners(), where it must not be
+      // disposed. Switch the source after this call returns.
+      video.value?.removeListener(_onVideoValueChanged);
+      final generation = _generation;
+      scheduleMicrotask(() {
+        if (generation == _generation) {
+          _onSourceFailed(value.errorDescription ?? 'Playback error');
+        }
+      });
       return;
     }
     final PlaybackStatus next;
@@ -147,6 +198,9 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       next = PlaybackStatus.playing;
     } else {
       next = PlaybackStatus.paused;
+    }
+    if (next == PlaybackStatus.playing) {
+      _failuresInRow = 0;
     }
     if (next != status.value) {
       status.value = next;

@@ -96,6 +96,10 @@ class _PlayerViewState extends State<PlayerView> {
                     player.togglePlay();
                     _scheduleHide();
                   },
+                  onNextSource: () {
+                    player.nextSource();
+                    _scheduleHide();
+                  },
                 ),
               ),
             ),
@@ -191,12 +195,14 @@ class _ControlBar extends StatelessWidget {
   final bool isFullscreen;
   final VoidCallback onToggleFullscreen;
   final VoidCallback onTogglePlay;
+  final VoidCallback onNextSource;
 
   const _ControlBar({
     required this.controller,
     required this.isFullscreen,
     required this.onToggleFullscreen,
     required this.onTogglePlay,
+    required this.onNextSource,
   });
 
   @override
@@ -242,6 +248,18 @@ class _ControlBar extends StatelessWidget {
                     ),
                   ),
                 ),
+                Obx(() {
+                  final count = controller.channel.value?.urls.length ?? 0;
+                  if (count < 2) {
+                    return const SizedBox.shrink();
+                  }
+                  return TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: Colors.white),
+                    onPressed: onNextSource,
+                    icon: const Icon(Icons.swap_horiz),
+                    label: Text('${controller.sourceIndex.value + 1}/$count'),
+                  );
+                }),
                 IconButton(
                   tooltip: isFullscreen ? 'Exit full screen' : 'Full screen',
                   onPressed: onToggleFullscreen,

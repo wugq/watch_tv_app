@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tv/features/channel_editor/channel_editor_controller.dart';
 import 'package:tv/features/channel_editor/widgets/batch_channel_form.dart';
+import 'package:tv/features/channel_editor/widgets/import_playlist_form.dart';
 import 'package:tv/features/channel_editor/widgets/single_channel_form.dart';
 
 class ChannelEditorPage extends GetView<ChannelEditorController> {
@@ -16,7 +17,7 @@ class ChannelEditorPage extends GetView<ChannelEditorController> {
       );
     }
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Add channels'),
@@ -24,6 +25,7 @@ class ChannelEditorPage extends GetView<ChannelEditorController> {
             tabs: [
               Tab(icon: Icon(Icons.add_link), text: 'Single'),
               Tab(icon: Icon(Icons.playlist_add), text: 'Batch'),
+              Tab(icon: Icon(Icons.file_download_outlined), text: 'Import'),
             ],
           ),
         ),
@@ -31,6 +33,7 @@ class ChannelEditorPage extends GetView<ChannelEditorController> {
           children: [
             SingleChannelForm(controller: controller),
             BatchChannelForm(controller: controller),
+            ImportPlaylistForm(controller: controller),
           ],
         ),
       ),

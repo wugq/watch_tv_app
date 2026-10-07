@@ -27,16 +27,18 @@ class SingleChannelForm extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           TextFormField(
-            controller: controller.urlText,
-            keyboardType: TextInputType.url,
-            textInputAction: TextInputAction.next,
+            controller: controller.urlsText,
+            keyboardType: TextInputType.multiline,
             autocorrect: false,
+            minLines: 1,
+            maxLines: 6,
             decoration: const InputDecoration(
-              labelText: 'Stream URL',
+              labelText: 'Stream URLs',
               hintText: 'https://example.com/live.m3u8',
+              helperText: 'One URL per line. Extra URLs are backup sources.',
               prefixIcon: Icon(Icons.link),
             ),
-            validator: controller.validateUrl,
+            validator: controller.validateUrls,
           ),
           const SizedBox(height: 16),
           Obx(

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -58,6 +59,12 @@ class HomeController extends GetxController {
   Future<void> reload() async {
     isLoading.value = true;
     channels.assignAll(await _repository.getAll());
+    // Keep the player's copy in sync, e.g. after sources were imported.
+    final current = player.channel.value;
+    final fresh = channels.firstWhereOrNull((c) => c.key == current?.key);
+    if (fresh != null && fresh != current) {
+      player.channel.value = fresh;
+    }
     if (!categories.contains(selectedCategory.value)) {
       selectedCategory.value = allCategories;
     }
@@ -96,7 +103,7 @@ class HomeController extends GetxController {
     await reload();
     final edited = saved.first;
     if (isPlaying(channel)) {
-      if (edited.url == channel.url) {
+      if (listEquals(edited.urls, channel.urls)) {
         player.channel.value = edited;
       } else {
         player.play(edited);

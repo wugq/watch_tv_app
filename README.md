@@ -12,17 +12,33 @@ Add a live stream channel to this app and start watching.
 
 ## Adding channels
 
-* **Single**: channel name, stream URL and an optional category.
-* **Batch**: paste a list, one channel per line:
+The add page has three tabs:
 
-  ```text
-  News,#genre#
-  Channel A, https://example.com/a.m3u8
-  Channel B, https://example.com/b.m3u8
-  ```
+* **Single**: channel name, one or more stream URLs (one per line) and an optional category.
+* **Batch**: paste a channel list (TXT or M3U).
+* **Import**: load a TXT or M3U playlist from a file or a URL, check the summary, then import.
 
-  A `Category,#genre#` line sets the category of the lines after it.
-  M3U playlists (starting with `#EXTM3U`) are also accepted; `group-title` is used as the category.
+TXT format, one source per line:
+
+```text
+News,#genre#
+Channel A, https://example.com/a.m3u8
+Channel A, https://backup.example.com/a.m3u8
+Channel B, https://example.com/b.m3u8#https://backup.example.com/b.m3u8
+```
+
+* A `Category,#genre#` line sets the category of the lines after it.
+* Several URLs on one line can be separated by `#`.
+
+M3U playlists (starting with `#EXTM3U`) use `group-title` as the category.
+
+## Multiple sources
+
+Lines with the same channel name become one channel with several sources.
+Importing a channel that already exists appends the new sources (duplicates
+are skipped). When a source fails or does not start within 20 seconds, the
+player tries the next one. The source button in the player (`1/3`) switches
+sources by hand.
 
 Long-press a channel, or use its menu, to edit or delete it.
 
@@ -33,6 +49,7 @@ Long-press a channel, or use its menu, to edit or delete it.
 * [video_player](https://pub.dev/packages/video_player) (ExoPlayer on Android, AVPlayer on iOS)
 * [sqflite](https://pub.dev/packages/sqflite)
 * [wakelock_plus](https://pub.dev/packages/wakelock_plus)
+* [file_picker](https://pub.dev/packages/file_picker) and [http](https://pub.dev/packages/http) for playlist import
 
 ## Project structure
 
@@ -43,7 +60,7 @@ lib/
   core/                     small helpers
   data/
     models/                 Channel
-    sources/                sqflite database
+    sources/                sqflite database (schema v2), playlist loader (file / URL)
     repositories/           ChannelRepository (interface + sqflite implementation)
     parsers/                channel list / M3U parser
   features/
@@ -74,6 +91,8 @@ The logo is downloaded from [flaticon](https://www.flaticon.com/)
 
 - [x] support Dark and Light Mode
 
-- [x] support m3u playlist (paste)
+- [x] support m3u / txt playlist (paste, file, URL)
 
-- [ ] import m3u file / URL
+- [x] multiple sources per channel with automatic fallback
+
+- [ ] refresh imported playlists from their URL

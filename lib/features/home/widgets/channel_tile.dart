@@ -63,7 +63,10 @@ class ChannelTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      categoryLabel(channel.category),
+                      channel.urls.length > 1
+                          ? '${categoryLabel(channel.category)} · '
+                                '${channel.urls.length} sources'
+                          : categoryLabel(channel.category),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(

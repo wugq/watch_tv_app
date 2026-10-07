@@ -12,22 +12,31 @@ class InMemoryChannelRepository implements ChannelRepository {
   Future<List<Channel>> getAll() async => List.of(_channels);
 
   @override
-  Future<void> save(Channel channel) async {
-    _channels.removeWhere((c) => c.key == channel.key);
-    _channels.add(channel);
-  }
-
-  @override
-  Future<void> saveAll(Iterable<Channel> channels) async {
+  Future<ImportResult> import(Iterable<Channel> channels) async {
+    var added = 0;
+    var updated = 0;
     for (final channel in channels) {
-      await save(channel);
+      final index = _channels.indexWhere((c) => c.key == channel.key);
+      if (index < 0) {
+        _channels.add(channel);
+        added++;
+      } else {
+        _channels[index] = _channels[index].merge(channel);
+        updated++;
+      }
     }
+    return ImportResult(added: added, updated: updated);
   }
 
   @override
   Future<void> replace(Channel oldChannel, Channel newChannel) async {
-    await delete(oldChannel.key);
-    await save(newChannel);
+    final index = _channels.indexWhere((c) => c.key == oldChannel.key);
+    _channels.removeWhere((c) => c.key == newChannel.key);
+    if (index < 0 || index > _channels.length) {
+      _channels.add(newChannel);
+    } else {
+      _channels.insert(index, newChannel);
+    }
   }
 
   @override
@@ -41,9 +50,10 @@ class FakePlayerController extends PlayerController {
   final played = <Channel>[];
 
   @override
-  Future<void> play(Channel newChannel) async {
+  Future<void> play(Channel newChannel, {int source = 0}) async {
     played.add(newChannel);
     channel.value = newChannel;
+    sourceIndex.value = source;
     status.value = PlaybackStatus.playing;
   }
 

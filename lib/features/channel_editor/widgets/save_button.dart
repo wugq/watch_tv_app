@@ -4,11 +4,13 @@ import 'package:get/get.dart';
 class SaveButton extends StatelessWidget {
   final RxBool isSaving;
   final VoidCallback onPressed;
+  final String label;
 
   const SaveButton({
     super.key,
     required this.isSaving,
     required this.onPressed,
+    this.label = 'Save',
   });
 
   @override
@@ -23,7 +25,7 @@ class SaveButton extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.check),
-        label: const Text('Save'),
+        label: Text(label),
       ),
     );
   }
