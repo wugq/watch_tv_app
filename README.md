@@ -1,5 +1,7 @@
 # WatchTV
 
+[![CI](https://github.com/wugq/watch_tv_app/actions/workflows/ci.yml/badge.svg)](https://github.com/wugq/watch_tv_app/actions/workflows/ci.yml)
+
 Watch your live stream with WatchTV app. This app DOES NOT provide any live stream content.
 
 ## Getting Started
@@ -124,6 +126,13 @@ flutter analyze
 flutter test
 flutter run
 ```
+
+## CI
+
+`.github/workflows/ci.yml` runs format check, `flutter analyze` and
+`flutter test`, then builds Android (APK), Linux, Windows, macOS (unsigned)
+and iOS (compile only, no codesign). Builds are uploaded as workflow
+artifacts.
 
 The logo is downloaded from [flaticon](https://www.flaticon.com/)
 
