@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:tv/features/home/home_controller.dart';
 import 'package:tv/features/home/widgets/channel_browser.dart';
@@ -13,33 +14,66 @@ class HomePage extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      if (controller.isFullscreen.value) {
-        return _FullscreenPlayer(controller: controller);
-      }
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('WatchTV'),
-          actions: [
-            IconButton(
-              tooltip: 'Add channels',
-              onPressed: controller.addChannels,
-              icon: const Icon(Icons.playlist_add),
-            ),
-          ],
-        ),
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final wide =
-                constraints.maxWidth >= wideLayoutWidth ||
-                constraints.maxWidth > constraints.maxHeight * 1.2;
-            return wide
-                ? _WideLayout(controller: controller)
-                : _CompactLayout(controller: controller);
-          },
-        ),
-      );
-    });
+    return CallbackShortcuts(
+      bindings: _shortcuts(),
+      child: Focus(
+        autofocus: true,
+        child: Obx(() {
+          if (controller.isFullscreen.value) {
+            return _FullscreenPlayer(controller: controller);
+          }
+          return _buildScaffold();
+        }),
+      ),
+    );
+  }
+
+  /// Keyboard control for desktop (and TV remotes with a D-pad).
+  Map<ShortcutActivator, VoidCallback> _shortcuts() {
+    final player = controller.player;
+    return {
+      const SingleActivator(LogicalKeyboardKey.space): player.togglePlay,
+      const SingleActivator(LogicalKeyboardKey.mediaPlayPause):
+          player.togglePlay,
+      const SingleActivator(LogicalKeyboardKey.keyF):
+          controller.toggleFullscreen,
+      const SingleActivator(LogicalKeyboardKey.escape): () =>
+          controller.setFullscreen(false),
+      const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+          controller.playAdjacent(-1),
+      const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+          controller.playAdjacent(1),
+      const SingleActivator(LogicalKeyboardKey.channelUp): () =>
+          controller.playAdjacent(-1),
+      const SingleActivator(LogicalKeyboardKey.channelDown): () =>
+          controller.playAdjacent(1),
+      const SingleActivator(LogicalKeyboardKey.keyS): player.nextSource,
+    };
+  }
+
+  Widget _buildScaffold() {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('WatchTV'),
+        actions: [
+          IconButton(
+            tooltip: 'Add channels',
+            onPressed: controller.addChannels,
+            icon: const Icon(Icons.playlist_add),
+          ),
+        ],
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide =
+              constraints.maxWidth >= wideLayoutWidth ||
+              constraints.maxWidth > constraints.maxHeight * 1.2;
+          return wide
+              ? _WideLayout(controller: controller)
+              : _CompactLayout(controller: controller);
+        },
+      ),
+    );
   }
 }
 

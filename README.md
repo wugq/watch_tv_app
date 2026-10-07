@@ -43,7 +43,46 @@ sources by hand.
 Long-press a channel, or use its menu, to edit or delete it.
 
 Plain `http://` streams are allowed: `android:usesCleartextTraffic="true"` on
-Android and `NSAllowsArbitraryLoadsForMedia` (media playback only) on iOS.
+Android and `NSAllowsArbitraryLoadsForMedia` (media playback only) on iOS and macOS.
+
+## Platforms
+
+| Platform | Video | Database |
+|---|---|---|
+| Android | video_player (ExoPlayer) | sqflite |
+| iOS | video_player (AVPlayer) | sqflite |
+| macOS | video_player (AVPlayer) | sqflite |
+| Windows | video_player + [video_player_media_kit](https://pub.dev/packages/video_player_media_kit) (libmpv) | sqflite_common_ffi |
+| Linux | video_player + video_player_media_kit (libmpv) | sqflite_common_ffi |
+
+The backends are chosen in `lib/core/platform.dart`, so the rest of the app
+only uses the `video_player` API.
+
+On desktop the database is stored in the application support directory
+(for example `~/.local/share/dev.wugq.tv/` on Linux).
+
+### Linux build requirements
+
+```sh
+sudo apt install clang cmake ninja-build pkg-config libgtk-3-dev libmpv-dev mpv
+```
+
+The media_kit Linux plugin downloads the mimalloc source from GitHub during
+the CMake step.
+
+### Windows
+
+media_kit downloads prebuilt libmpv binaries during the build.
+
+### Keyboard (desktop)
+
+| Key | Action |
+|---|---|
+| Space | Play / pause |
+| F | Full screen |
+| Esc | Exit full screen |
+| Up / Down | Previous / next channel |
+| S | Next source |
 
 ## Tech stack
 
@@ -53,6 +92,8 @@ Android and `NSAllowsArbitraryLoadsForMedia` (media playback only) on iOS.
 * [sqflite](https://pub.dev/packages/sqflite)
 * [wakelock_plus](https://pub.dev/packages/wakelock_plus)
 * [file_picker](https://pub.dev/packages/file_picker) and [http](https://pub.dev/packages/http) for playlist import
+* [media_kit](https://pub.dev/packages/media_kit) via video_player_media_kit (Windows, Linux)
+* [window_manager](https://pub.dev/packages/window_manager) for desktop full screen
 
 ## Project structure
 
@@ -60,7 +101,7 @@ Android and `NSAllowsArbitraryLoadsForMedia` (media playback only) on iOS.
 lib/
   main.dart                 opens the database, registers ChannelRepository
   app/                      app widget, theme, routes and bindings
-  core/                     small helpers
+  core/                     helpers, platform setup (video / database backends, full screen)
   data/
     models/                 Channel
     sources/                sqflite database (schema v2), playlist loader (file / URL)
@@ -90,7 +131,9 @@ The logo is downloaded from [flaticon](https://www.flaticon.com/)
 
 - [x] support tablet (side-by-side layout on wide screens)
 
-- [ ] support TV (D-pad navigation)
+- [ ] support TV (D-pad navigation; arrow keys already switch channels)
+
+- [x] support desktop (macOS, Windows, Linux)
 
 - [x] support Dark and Light Mode
 

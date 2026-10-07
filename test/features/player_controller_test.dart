@@ -32,8 +32,18 @@ class FakeVideoController extends VideoPlayerController {
     value = value.copyWith(isPlaying: false);
   }
 
+  /// Same as video_player on an error event: the whole value is replaced.
   void fail() {
-    value = value.copyWith(errorDescription: 'stream ended');
+    value = VideoPlayerValue.erroneous('stream ended');
+  }
+
+  /// media_kit keeps sending state updates after a non-fatal error.
+  void keepPlaying() {
+    value = value.copyWith(isPlaying: true);
+  }
+
+  void buffer() {
+    value = value.copyWith(isBuffering: true);
   }
 }
 
@@ -49,10 +59,10 @@ void main() {
   late List<FakeVideoController> controllers;
   late PlayerController player;
 
-  setUp(() {
-    opened = [];
-    controllers = [];
-    player = PlayerController(
+  PlayerController createPlayer({bool errorsAreFatal = true}) {
+    return PlayerController(
+      errorsAreFatal: errorsAreFatal,
+      stallTimeout: const Duration(milliseconds: 50),
       createVideoController: (uri) {
         opened.add(uri.toString());
         final controller = FakeVideoController(uri, fails: uri.host == 'bad');
@@ -60,6 +70,12 @@ void main() {
         return controller;
       },
     );
+  }
+
+  setUp(() {
+    opened = [];
+    controllers = [];
+    player = createPlayer();
   });
 
   test('falls back to the next source when a source fails', () async {
@@ -105,5 +121,30 @@ void main() {
 
     expect(player.sourceIndex.value, 2);
     expect(player.status.value, PlaybackStatus.playing);
+  });
+
+  test('with non-fatal errors, an error keeps the source', () async {
+    player = createPlayer(errorsAreFatal: false);
+    await player.play(channel, source: 1);
+    await pumpEventQueue();
+
+    controllers.last.fail();
+    await pumpEventQueue();
+
+    expect(player.sourceIndex.value, 1);
+    expect(opened, ['http://good/2']);
+  });
+
+  test('buffering longer than stallTimeout moves to the next source', () async {
+    player = createPlayer(errorsAreFatal: false);
+    await player.play(channel, source: 1);
+    await pumpEventQueue();
+
+    controllers.last.buffer();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await pumpEventQueue();
+
+    expect(player.sourceIndex.value, 2);
+    expect(opened.last, 'http://good/3');
   });
 }

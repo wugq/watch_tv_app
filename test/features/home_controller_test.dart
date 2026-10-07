@@ -59,4 +59,16 @@ void main() {
 
     expect(player.channel.value, isNull);
   });
+
+  test('playAdjacent follows the visible list and wraps', () {
+    controller.playAdjacent(1);
+    expect(player.channel.value, news, reason: 'nothing playing: first');
+
+    controller.playAdjacent(1);
+    expect(player.channel.value, sport);
+
+    controller.selectCategory('News');
+    controller.playAdjacent(-1);
+    expect(player.channel.value, news);
+  });
 }

@@ -25,9 +25,21 @@ typedef VideoControllerFactory = VideoPlayerController Function(Uri url);
 class PlayerController extends GetxController with WidgetsBindingObserver {
   final VideoControllerFactory _createVideoController;
 
-  PlayerController({VideoControllerFactory? createVideoController})
-    : _createVideoController =
-          createVideoController ?? VideoPlayerController.networkUrl;
+  /// Whether an error event after the stream started means the source is
+  /// broken. True for ExoPlayer / AVPlayer. media_kit (libmpv) also reports
+  /// non-fatal problems as errors, e.g. a missing audio device while the
+  /// video keeps playing, so there only [stallTimeout] switches sources.
+  final bool errorsAreFatal;
+
+  /// How long the stream may buffer before the next source is tried.
+  final Duration stallTimeout;
+
+  PlayerController({
+    VideoControllerFactory? createVideoController,
+    this.errorsAreFatal = true,
+    this.stallTimeout = const Duration(seconds: 20),
+  }) : _createVideoController =
+           createVideoController ?? VideoPlayerController.networkUrl;
 
   /// How long a source may take to start before the next one is tried.
   static const openTimeout = Duration(seconds: 20);
@@ -47,13 +59,17 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   /// Sources that failed since the last successful start.
   int _failuresInRow = 0;
 
-  double get aspectRatio {
-    final value = video.value?.value;
-    if (value == null || !value.isInitialized || value.aspectRatio <= 0) {
-      return 16 / 9;
-    }
-    return value.aspectRatio;
-  }
+  Timer? _stallTimer;
+
+  /// True once the current source finished `initialize()`.
+  ///
+  /// Not the same as `video.value.isInitialized`: video_player replaces the
+  /// whole value on an error event, which media_kit also sends for
+  /// non-fatal problems while the video keeps playing.
+  final isVideoReady = false.obs;
+
+  /// Last known aspect ratio of the current stream.
+  final aspectRatio = (16 / 9).obs;
 
   @override
   void onInit() {
@@ -119,6 +135,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
     final controller = _createVideoController(uri);
     video.value = controller;
+    isVideoReady.value = false;
     try {
       await controller.initialize().timeout(openTimeout);
     } catch (e) {
@@ -132,9 +149,12 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     if (generation != _generation) {
       return;
     }
+    _updateAspectRatio(controller.value);
+    isVideoReady.value = true;
     controller.addListener(_onVideoValueChanged);
-    await controller.play();
-    video.refresh();
+    // Not awaited: with media_kit the returned future can take long.
+    // Playback errors also arrive through the controller's value.
+    controller.play().catchError((Object _) {});
   }
 
   void _onSourceFailed(String message) {
@@ -165,7 +185,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
   void togglePlay() {
     final controller = video.value;
-    if (controller == null || !controller.value.isInitialized) {
+    if (controller == null || !isVideoReady.value) {
       retry();
     } else if (controller.value.isPlaying) {
       controller.pause();
@@ -179,7 +199,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     if (value == null) {
       return;
     }
-    if (value.hasError) {
+    if (value.hasError && errorsAreFatal) {
       // Called from the controller's notifyListeners(), where it must not be
       // disposed. Switch the source after this call returns.
       video.value?.removeListener(_onVideoValueChanged);
@@ -191,6 +211,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       });
       return;
     }
+    _updateAspectRatio(value);
     final PlaybackStatus next;
     if (value.isBuffering) {
       next = PlaybackStatus.buffering;
@@ -202,10 +223,35 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     if (next == PlaybackStatus.playing) {
       _failuresInRow = 0;
     }
+    _watchForStall(next == PlaybackStatus.buffering);
     if (next != status.value) {
       status.value = next;
       _updateWakelock();
     }
+  }
+
+  void _updateAspectRatio(VideoPlayerValue value) {
+    if (value.isInitialized && value.aspectRatio > 0) {
+      aspectRatio.value = value.aspectRatio;
+    }
+  }
+
+  void _watchForStall(bool buffering) {
+    if (!buffering) {
+      _stallTimer?.cancel();
+      _stallTimer = null;
+      return;
+    }
+    if (_stallTimer != null) {
+      return;
+    }
+    final generation = _generation;
+    _stallTimer = Timer(stallTimeout, () {
+      _stallTimer = null;
+      if (generation == _generation) {
+        _onSourceFailed('Stream stalled');
+      }
+    });
   }
 
   void _setError(String message) {
@@ -228,11 +274,14 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   }
 
   void _disposeVideo() {
+    _stallTimer?.cancel();
+    _stallTimer = null;
     final controller = video.value;
     if (controller == null) {
       return;
     }
     video.value = null;
+    isVideoReady.value = false;
     controller.removeListener(_onVideoValueChanged);
     controller.dispose();
   }

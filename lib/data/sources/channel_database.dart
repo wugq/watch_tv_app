@@ -1,5 +1,7 @@
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:tv/core/platform.dart';
 
 /// Schema:
 ///
@@ -15,7 +17,7 @@ class ChannelDatabase {
 
   static Future<Database> open() async {
     return openDatabase(
-      join(await getDatabasesPath(), 'watch_tv_database.db'),
+      join(await _directory(), 'watch_tv_database.db'),
       version: version,
       onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, version) async {
@@ -29,6 +31,15 @@ class ChannelDatabase {
         }
       },
     );
+  }
+
+  /// Mobile keeps the sqflite default (existing data stays where it is).
+  /// Desktop uses the per-user application support directory.
+  static Future<String> _directory() async {
+    if (isDesktop) {
+      return (await getApplicationSupportDirectory()).path;
+    }
+    return getDatabasesPath();
   }
 
   static void _createTables(Batch batch) {

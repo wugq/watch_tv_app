@@ -49,6 +49,14 @@ class _PlayerViewState extends State<PlayerView> {
     });
   }
 
+  /// Mouse movement shows the controls; they hide again after a delay.
+  void _showControls() {
+    if (!_controlsVisible) {
+      setState(() => _controlsVisible = true);
+    }
+    _scheduleHide();
+  }
+
   void _onTap() {
     setState(() => _controlsVisible = !_controlsVisible);
     if (_controlsVisible) {
@@ -59,51 +67,54 @@ class _PlayerViewState extends State<PlayerView> {
   @override
   Widget build(BuildContext context) {
     final player = widget.controller;
-    return ColoredBox(
-      color: Colors.black,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _onTap,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Obx(
-              () => _VideoSurface(
-                video: player.video.value,
-                aspectRatio: player.aspectRatio,
-              ),
-            ),
-            Obx(
-              () => _StatusLayer(
-                status: player.status.value,
-                errorMessage: player.errorMessage.value,
-                onRetry: player.retry,
-              ),
-            ),
-            AnimatedOpacity(
-              opacity: _controlsVisible ? 1 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: IgnorePointer(
-                ignoring: !_controlsVisible,
-                child: _ControlBar(
-                  controller: player,
-                  isFullscreen: widget.isFullscreen,
-                  onToggleFullscreen: () {
-                    widget.onToggleFullscreen();
-                    _scheduleHide();
-                  },
-                  onTogglePlay: () {
-                    player.togglePlay();
-                    _scheduleHide();
-                  },
-                  onNextSource: () {
-                    player.nextSource();
-                    _scheduleHide();
-                  },
+    return MouseRegion(
+      onHover: (_) => _showControls(),
+      child: ColoredBox(
+        color: Colors.black,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _onTap,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Obx(
+                () => _VideoSurface(
+                  video: player.isVideoReady.value ? player.video.value : null,
+                  aspectRatio: player.aspectRatio.value,
                 ),
               ),
-            ),
-          ],
+              Obx(
+                () => _StatusLayer(
+                  status: player.status.value,
+                  errorMessage: player.errorMessage.value,
+                  onRetry: player.retry,
+                ),
+              ),
+              AnimatedOpacity(
+                opacity: _controlsVisible ? 1 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: IgnorePointer(
+                  ignoring: !_controlsVisible,
+                  child: _ControlBar(
+                    controller: player,
+                    isFullscreen: widget.isFullscreen,
+                    onToggleFullscreen: () {
+                      widget.onToggleFullscreen();
+                      _scheduleHide();
+                    },
+                    onTogglePlay: () {
+                      player.togglePlay();
+                      _scheduleHide();
+                    },
+                    onNextSource: () {
+                      player.nextSource();
+                      _scheduleHide();
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -119,14 +130,23 @@ class _VideoSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final video = this.video;
-    if (video == null || !video.value.isInitialized) {
-      return Opacity(
-        opacity: 0.35,
-        child: Image.asset('assets/tv_cover.jpg', fit: BoxFit.cover),
-      );
+    if (video == null) {
+      return const _Cover();
     }
     return Center(
       child: AspectRatio(aspectRatio: aspectRatio, child: VideoPlayer(video)),
+    );
+  }
+}
+
+class _Cover extends StatelessWidget {
+  const _Cover();
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.35,
+      child: Image.asset('assets/tv_cover.jpg', fit: BoxFit.cover),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:tv/core/platform.dart';
 import 'package:tv/data/models/channel.dart';
 import 'package:tv/features/channel_editor/channel_editor_controller.dart';
 import 'package:tv/features/channel_editor/channel_editor_page.dart';
@@ -16,7 +17,7 @@ final appPages = [
     name: Routes.home,
     page: () => const HomePage(),
     binding: BindingsBuilder(() {
-      Get.put(PlayerController());
+      Get.put(PlayerController(errorsAreFatal: !usesMediaKit));
       Get.put(HomeController(Get.find(), Get.find()));
     }),
   ),

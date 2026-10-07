@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:tv/app/routes.dart';
+import 'package:tv/core/platform.dart';
 import 'package:tv/data/models/channel.dart';
 import 'package:tv/data/repositories/channel_repository.dart';
 import 'package:tv/features/player/player_controller.dart';
+import 'package:window_manager/window_manager.dart';
 
-class HomeController extends GetxController {
+class HomeController extends GetxController with WindowListener {
   /// Value of [selectedCategory] that shows every channel.
   static const allCategories = '';
 
@@ -38,6 +39,22 @@ class HomeController extends GetxController {
   }
 
   @override
+  void onInit() {
+    super.onInit();
+    if (isDesktop) {
+      windowManager.addListener(this);
+    }
+  }
+
+  // The user can also leave full screen with the window controls or the
+  // system shortcut.
+  @override
+  void onWindowEnterFullScreen() => isFullscreen.value = true;
+
+  @override
+  void onWindowLeaveFullScreen() => isFullscreen.value = false;
+
+  @override
   void onReady() {
     super.onReady();
     _loadAndAutoPlay();
@@ -45,6 +62,9 @@ class HomeController extends GetxController {
 
   @override
   void onClose() {
+    if (isDesktop) {
+      windowManager.removeListener(this);
+    }
     _setFullscreenMode(false);
     super.onClose();
   }
@@ -140,16 +160,19 @@ class HomeController extends GetxController {
   }
 
   void _setFullscreenMode(bool fullscreen) {
-    if (fullscreen) {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-    } else {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-      SystemChrome.setPreferredOrientations(const []);
+    setAppFullscreen(fullscreen);
+  }
+
+  /// Plays the channel [offset] places from the current one in the visible
+  /// list, wrapping around.
+  void playAdjacent(int offset) {
+    final list = visibleChannels;
+    if (list.isEmpty) {
+      return;
     }
+    final current = list.indexWhere(isPlaying);
+    final next = current < 0 ? 0 : (current + offset) % list.length;
+    player.play(list[next]);
   }
 
   void _showMessage(String message) {

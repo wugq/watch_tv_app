@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
@@ -148,5 +149,28 @@ void main() {
 
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('keyboard switches channels and full screen', (tester) async {
+    final a = Channel.create(name: 'Alpha', urls: ['http://x/a']);
+    final b = Channel.create(name: 'Beta', urls: ['http://x/b']);
+    final player = await pumpApp(tester, [a, b]);
+    final controller = Get.find<HomeController>();
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(player.channel.value, b);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(player.channel.value, a, reason: 'wraps around');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
+    await tester.pumpAndSettle();
+    expect(controller.isFullscreen.value, isTrue);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(controller.isFullscreen.value, isFalse);
   });
 }
