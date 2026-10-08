@@ -15,11 +15,18 @@ class Channel {
   /// Stream URLs in order of preference. Never empty.
   final List<String> urls;
 
+  final bool favorite;
+
+  /// When the channel was last played, or null if never.
+  final DateTime? lastWatched;
+
   Channel({
     required this.key,
     required this.name,
     required this.category,
     required List<String> urls,
+    this.favorite = false,
+    this.lastWatched,
   }) : assert(urls.isNotEmpty),
        urls = List.unmodifiable(urls);
 
@@ -40,11 +47,25 @@ class Channel {
   /// Returns a copy with the sources of [other] appended (duplicates
   /// skipped) and the category of [other].
   Channel merge(Channel other) {
+    return copyWith(
+      category: other.category,
+      urls: _unique([...urls, ...other.urls]),
+    );
+  }
+
+  Channel copyWith({
+    String? category,
+    List<String>? urls,
+    bool? favorite,
+    DateTime? lastWatched,
+  }) {
     return Channel(
       key: key,
       name: name,
-      category: other.category,
-      urls: _unique([...urls, ...other.urls]),
+      category: category ?? this.category,
+      urls: urls ?? this.urls,
+      favorite: favorite ?? this.favorite,
+      lastWatched: lastWatched ?? this.lastWatched,
     );
   }
 
@@ -62,11 +83,20 @@ class Channel {
         other.key == key &&
         other.name == name &&
         other.category == category &&
+        other.favorite == favorite &&
+        other.lastWatched == lastWatched &&
         _listEquals(other.urls, urls);
   }
 
   @override
-  int get hashCode => Object.hash(key, name, category, Object.hashAll(urls));
+  int get hashCode => Object.hash(
+    key,
+    name,
+    category,
+    favorite,
+    lastWatched,
+    Object.hashAll(urls),
+  );
 
   @override
   String toString() {

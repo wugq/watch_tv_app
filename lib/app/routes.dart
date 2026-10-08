@@ -5,11 +5,17 @@ import 'package:tv/features/channel_editor/channel_editor_controller.dart';
 import 'package:tv/features/channel_editor/channel_editor_page.dart';
 import 'package:tv/features/home/home_controller.dart';
 import 'package:tv/features/home/home_page.dart';
+import 'package:tv/features/manage/manage_controller.dart';
+import 'package:tv/features/manage/manage_page.dart';
 import 'package:tv/features/player/player_controller.dart';
+import 'package:tv/features/playlist_import/playlist_import_controller.dart';
+import 'package:tv/features/playlist_import/playlist_import_page.dart';
 
 abstract final class Routes {
   static const home = '/';
-  static const channelEditor = '/channel-editor';
+  static const channelEditor = '/channel';
+  static const importPlaylist = '/playlist/import';
+  static const manage = '/manage';
 }
 
 final appPages = [
@@ -34,10 +40,23 @@ final appPages = [
       Get.put(
         ChannelEditorController(
           Get.find(),
-          Get.find(),
           original: argument is Channel ? argument : null,
         ),
       );
+    }),
+  ),
+  GetPage(
+    name: Routes.importPlaylist,
+    page: () => const PlaylistImportPage(),
+    binding: BindingsBuilder(() {
+      Get.put(PlaylistImportController(Get.find(), Get.find()));
+    }),
+  ),
+  GetPage(
+    name: Routes.manage,
+    page: () => const ManagePage(),
+    binding: BindingsBuilder(() {
+      Get.put(ManageController(Get.find(), Get.find()));
     }),
   ),
 ];

@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:tv/data/models/channel.dart';
-import 'package:tv/features/home/widgets/category_label.dart';
+import 'package:tv/features/home/library_section.dart';
+import 'package:tv/widgets/favorite_button.dart';
 
 enum _ChannelAction { edit, delete }
 
+/// One channel in a list: tap plays, star toggles favorite, menu edits or
+/// deletes.
 class ChannelTile extends StatelessWidget {
   final Channel channel;
   final bool isPlaying;
+  final bool showCategory;
   final VoidCallback onTap;
+  final VoidCallback onToggleFavorite;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -16,28 +21,35 @@ class ChannelTile extends StatelessWidget {
     required this.channel,
     required this.isPlaying,
     required this.onTap,
+    required this.onToggleFavorite,
     required this.onEdit,
     required this.onDelete,
+    this.showCategory = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final foreground = isPlaying ? scheme.onPrimaryContainer : scheme.onSurface;
+    final sources = channel.urls.length;
+    final details = [
+      if (showCategory) categoryLabel(channel.category),
+      if (sources > 1) '$sources sources',
+    ].join(' · ');
 
-    return Card(
-      color: isPlaying ? scheme.primaryContainer : null,
+    return Material(
+      color: isPlaying ? scheme.primaryContainer : Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         onLongPress: onEdit,
         child: Padding(
-          padding: const EdgeInsets.only(left: 12),
+          padding: const EdgeInsets.fromLTRB(12, 6, 0, 6),
           child: Row(
             children: [
               CircleAvatar(
-                radius: 20,
+                radius: 18,
                 backgroundColor: isPlaying
                     ? scheme.primary
                     : scheme.secondaryContainer,
@@ -45,13 +57,16 @@ class ChannelTile extends StatelessWidget {
                     ? scheme.onPrimary
                     : scheme.onSecondaryContainer,
                 child: isPlaying
-                    ? const Icon(Icons.graphic_eq, size: 20)
-                    : Text(_initial(channel.name)),
+                    ? const Icon(Icons.graphic_eq, size: 18)
+                    : Text(
+                        _initial(channel.name),
+                        style: const TextStyle(fontSize: 14),
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -59,26 +74,29 @@ class ChannelTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall?.copyWith(
-                        color: foreground,
+                        color: isPlaying ? scheme.onPrimaryContainer : null,
                       ),
                     ),
-                    Text(
-                      channel.urls.length > 1
-                          ? '${categoryLabel(channel.category)} · '
-                                '${channel.urls.length} sources'
-                          : categoryLabel(channel.category),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: foreground.withValues(alpha: 0.7),
+                    if (details.isNotEmpty)
+                      Text(
+                        details,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isPlaying
+                              ? scheme.onPrimaryContainer
+                              : scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
+              FavoriteButton(
+                favorite: channel.favorite,
+                onPressed: onToggleFavorite,
+              ),
               PopupMenuButton<_ChannelAction>(
                 tooltip: 'More',
-                iconColor: foreground,
                 onSelected: (action) => switch (action) {
                   _ChannelAction.edit => onEdit(),
                   _ChannelAction.delete => onDelete(),
@@ -88,7 +106,7 @@ class ChannelTile extends StatelessWidget {
                     value: _ChannelAction.edit,
                     child: ListTile(
                       leading: Icon(Icons.edit_outlined),
-                      title: Text('Edit'),
+                      title: Text('Edit sources'),
                     ),
                   ),
                   PopupMenuItem(

@@ -1,56 +1,38 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tv/data/models/channel.dart';
 import 'package:tv/data/parsers/channel_list_parser.dart';
 import 'package:tv/data/repositories/channel_repository.dart';
-import 'package:tv/data/sources/playlist_loader.dart';
 
-/// A loaded playlist and the channels found in it.
-class ImportPreview {
-  final LoadedPlaylist playlist;
-  final List<Channel> channels;
-
-  const ImportPreview(this.playlist, this.channels);
-
-  int get sourceCount => channels.fold(0, (sum, c) => sum + c.urls.length);
-
-  int get categoryCount => channels.map((c) => c.category).toSet().length;
-}
-
-/// Adds channels (single, pasted list or imported playlist), or edits one
-/// channel when the route argument is a [Channel]. Pops with the saved
-/// channels.
+/// Adds one channel, or edits the channel passed as route argument.
+///
+/// Pops with the saved [Channel], or with [deleted] after a delete.
 class ChannelEditorController extends GetxController {
-  final ChannelRepository _repository;
-  final PlaylistLoader _loader;
+  static const deleted = 'deleted';
 
-  /// The channel being edited, or null when adding channels.
+  final ChannelRepository _repository;
+
+  /// The channel being edited, or null when adding a channel.
   final Channel? original;
 
-  ChannelEditorController(this._repository, this._loader, {this.original});
+  ChannelEditorController(this._repository, {this.original});
 
   bool get isEditing => original != null;
 
-  final singleFormKey = GlobalKey<FormState>();
-  final batchFormKey = GlobalKey<FormState>();
-
+  final formKey = GlobalKey<FormState>();
   late final nameText = TextEditingController(text: original?.name);
-  late final urlsText = TextEditingController(text: original?.urls.join('\n'));
   late final categoryText = TextEditingController(
     text: original?.category == Channel.defaultCategory
         ? ''
         : original?.category,
   );
-  final batchText = TextEditingController();
-  final batchCategoryText = TextEditingController();
-  final importUrlText = TextEditingController();
-  final importCategoryText = TextEditingController();
+  final newUrlText = TextEditingController();
 
+  late final urls = <String>[...?original?.urls].obs;
+  late final favorite = (original?.favorite ?? false).obs;
   final categories = <String>[].obs;
   final isSaving = false.obs;
-  final isLoadingPlaylist = false.obs;
-  final importError = RxnString();
-  final importPreview = Rxn<ImportPreview>();
+  final urlError = RxnString();
 
   @override
   void onInit() {
@@ -61,12 +43,8 @@ class ChannelEditorController extends GetxController {
   @override
   void onClose() {
     nameText.dispose();
-    urlsText.dispose();
     categoryText.dispose();
-    batchText.dispose();
-    batchCategoryText.dispose();
-    importUrlText.dispose();
-    importCategoryText.dispose();
+    newUrlText.dispose();
     super.onClose();
   }
 
@@ -87,142 +65,82 @@ class ChannelEditorController extends GetxController {
     return null;
   }
 
-  String? validateUrls(String? value) {
-    final lines = _lines(value ?? '');
-    if (lines.isEmpty) {
-      return 'Enter at least one stream URL';
+  /// Adds the URL in [newUrlText]. Returns false when it is not valid.
+  bool addUrl() {
+    final url = newUrlText.text.trim();
+    if (url.isEmpty) {
+      return false;
     }
-    for (final line in lines) {
-      if (!ChannelListParser.isStreamUrl(line)) {
-        return 'Not a full URL: $line';
-      }
+    if (!ChannelListParser.isStreamUrl(url)) {
+      urlError.value =
+          'Enter a full URL, for example https://example.com/live.m3u8';
+      return false;
     }
-    return null;
+    if (!urls.contains(url)) {
+      urls.add(url);
+    }
+    newUrlText.clear();
+    urlError.value = null;
+    return true;
   }
 
-  String? validateBatch(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Paste one or more channels';
-    }
-    if (ChannelListParser.parse(value).isEmpty) {
-      return 'No valid channel found. Use "Name, URL" on each line';
-    }
-    return null;
+  void removeUrl(int index) => urls.removeAt(index);
+
+  /// Moves a source one place up, so it is tried earlier.
+  void moveUp(int index) {
+    if (index <= 0) return;
+    final url = urls.removeAt(index);
+    urls.insert(index - 1, url);
   }
 
-  Future<void> saveSingle() async {
-    if (!(singleFormKey.currentState?.validate() ?? false)) {
+  Future<void> save() async {
+    // A URL typed but not added yet still counts.
+    if (newUrlText.text.trim().isNotEmpty && !addUrl()) {
       return;
     }
-    final channel = Channel.create(
+    final nameValid = formKey.currentState?.validate() ?? false;
+    if (urls.isEmpty) {
+      urlError.value = 'Add at least one stream URL';
+    }
+    if (!nameValid || urls.isEmpty || isSaving.value) {
+      return;
+    }
+    final created = Channel.create(
       name: nameText.text.trim(),
-      urls: _lines(urlsText.text),
+      urls: urls,
       category: categoryText.text,
     );
-    await _save(() async {
-      final old = original;
-      if (old == null) {
-        // Same name as an existing channel: the URLs become extra sources.
-        await _repository.import([channel]);
-      } else {
-        await _repository.replace(old, channel);
-      }
-      return [channel];
-    });
-  }
-
-  Future<void> saveBatch() async {
-    if (!(batchFormKey.currentState?.validate() ?? false)) {
-      return;
-    }
-    final channels = ChannelListParser.parse(
-      batchText.text,
-      defaultCategory: _textOrNull(batchCategoryText),
-    );
-    await _save(() async {
-      await _repository.import(channels);
-      return channels;
-    });
-  }
-
-  Future<void> pickFile() {
-    return _loadPlaylist(_loader.pickFile);
-  }
-
-  Future<void> downloadUrl() {
-    return _loadPlaylist(() => _loader.fromUrl(importUrlText.text));
-  }
-
-  Future<void> saveImport() async {
-    final preview = importPreview.value;
-    if (preview == null) {
-      return;
-    }
-    final channels = ChannelListParser.parse(
-      preview.playlist.text,
-      defaultCategory: _textOrNull(importCategoryText),
-    );
-    await _save(() async {
-      await _repository.import(channels);
-      return channels;
-    });
-  }
-
-  void clearImport() {
-    importPreview.value = null;
-    importError.value = null;
-  }
-
-  Future<void> _loadPlaylist(Future<LoadedPlaylist?> Function() load) async {
-    if (isLoadingPlaylist.value) {
-      return;
-    }
-    isLoadingPlaylist.value = true;
-    importError.value = null;
-    try {
-      final playlist = await load();
-      if (playlist == null) {
-        return;
-      }
-      final channels = ChannelListParser.parse(playlist.text);
-      if (channels.isEmpty) {
-        importPreview.value = null;
-        importError.value =
-            'No channel found in ${playlist.source}. Supported formats are '
-            'TXT ("Name,URL") and M3U.';
-        return;
-      }
-      importPreview.value = ImportPreview(playlist, channels);
-    } on PlaylistLoadException catch (e) {
-      importError.value = e.message;
-    } finally {
-      isLoadingPlaylist.value = false;
-    }
-  }
-
-  Future<void> _save(Future<List<Channel>> Function() action) async {
-    if (isSaving.value) {
-      return;
-    }
     isSaving.value = true;
     try {
-      final saved = await action();
-      Get.back(result: saved);
+      final old = original;
+      final Channel channel;
+      if (old == null) {
+        // Same name as an existing channel: the URLs become extra sources.
+        await _repository.import([created]);
+        channel = created;
+      } else {
+        channel = Channel(
+          key: created.key,
+          name: created.name,
+          category: created.category,
+          urls: created.urls,
+          favorite: favorite.value,
+          lastWatched: old.lastWatched,
+        );
+        await _repository.replace(old, channel);
+      }
+      Get.back(result: channel);
     } finally {
       isSaving.value = false;
     }
   }
 
-  static List<String> _lines(String text) {
-    return text
-        .split(RegExp(r'\r?\n'))
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty)
-        .toList();
-  }
-
-  static String? _textOrNull(TextEditingController controller) {
-    final text = controller.text.trim();
-    return text.isEmpty ? null : text;
+  Future<void> delete() async {
+    final old = original;
+    if (old == null) {
+      return;
+    }
+    await _repository.delete(old.key);
+    Get.back(result: deleted);
   }
 }

@@ -11,11 +11,15 @@ class PlayerView extends StatefulWidget {
   final bool isFullscreen;
   final VoidCallback onToggleFullscreen;
 
+  /// Shows a channel list button in the control bar when set.
+  final VoidCallback? onShowChannels;
+
   const PlayerView({
     super.key,
     required this.controller,
     required this.isFullscreen,
     required this.onToggleFullscreen,
+    this.onShowChannels,
   });
 
   @override
@@ -110,6 +114,7 @@ class _PlayerViewState extends State<PlayerView> {
                       player.nextSource();
                       _scheduleHide();
                     },
+                    onShowChannels: widget.onShowChannels,
                   ),
                 ),
               ),
@@ -216,6 +221,7 @@ class _ControlBar extends StatelessWidget {
   final VoidCallback onToggleFullscreen;
   final VoidCallback onTogglePlay;
   final VoidCallback onNextSource;
+  final VoidCallback? onShowChannels;
 
   const _ControlBar({
     required this.controller,
@@ -223,6 +229,7 @@ class _ControlBar extends StatelessWidget {
     required this.onToggleFullscreen,
     required this.onTogglePlay,
     required this.onNextSource,
+    required this.onShowChannels,
   });
 
   @override
@@ -243,6 +250,12 @@ class _ControlBar extends StatelessWidget {
             data: const IconThemeData(color: Colors.white),
             child: Row(
               children: [
+                if (onShowChannels != null)
+                  IconButton(
+                    tooltip: 'Channels',
+                    onPressed: onShowChannels,
+                    icon: const Icon(Icons.menu),
+                  ),
                 Obx(() {
                   final playing =
                       controller.status.value == PlaybackStatus.playing ||

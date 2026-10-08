@@ -12,15 +12,33 @@ Add a live stream channel to this app and start watching.
 |:--------------------------------------------------------:|:--------------------------------------------------------:|:--------------------------------------------------------:|
 | ![Screen](./screen_shots/Screenshot_20220309-100404.png) | ![Screen](./screen_shots/Screenshot_20220309-100347.png) | ![Screen](./screen_shots/Screenshot_20220309-100210.png) |
 
+## Finding channels
+
+* **Favorites**: tap the star next to a channel. Favorites have their own
+  section and are shown first when the app starts.
+* **Recently watched**: the last 30 channels you played.
+* **Categories**: from the playlist (`group-title` or `#genre#`).
+* **Search**: by channel name or category.
+
+On wide screens (desktop, tablets, phones in landscape) a sidebar lists the
+sections. Pointing at a section opens a second panel with its channels, like
+a start menu; clicking a section keeps the panel open. In full screen, move
+the pointer to the left edge (or use the menu button) to open the same menu.
+
+On phones, section chips sit above the channel list, and the grid button
+opens all sections in a sheet.
+
 ## Adding channels
 
-The add page has three tabs:
+**Add playlist** is the main way to add channels:
 
-* **Single**: channel name, one or more stream URLs (one per line) and an optional category.
-* **Batch**: paste a channel list (TXT or M3U).
-* **Import**: load a TXT or M3U playlist from a file or a URL, check the summary, then import.
+* **URL**: an M3U or TXT playlist on the web. URL playlists can be refreshed
+  later from the library.
+* **File**: an M3U or TXT file on the device.
+* **Paste**: playlist text.
 
-TXT format, one source per line:
+M3U playlists use `group-title` as the category. TXT format, one source per
+line:
 
 ```text
 News,#genre#
@@ -32,17 +50,28 @@ Channel B, https://example.com/b.m3u8#https://backup.example.com/b.m3u8
 * A `Category,#genre#` line sets the category of the lines after it.
 * Several URLs on one line can be separated by `#`.
 
-M3U playlists (starting with `#EXTM3U`) use `group-title` as the category.
+A single channel can also be added by hand (library, Channels tab, Add
+channel).
+
+## Library
+
+The library page (video library icon) manages what you added:
+
+* **Playlists**: refresh (URL playlists), rename, delete. Deleting a playlist
+  removes its sources; channels left without sources are deleted.
+* **Channels**: search, edit, star, delete. Long-press to select several
+  channels and delete them together.
+
+The channel editor lists all sources of a channel: add a URL, remove one, or
+move one up so it is tried earlier. It also has the delete button.
 
 ## Multiple sources
 
 Lines with the same channel name become one channel with several sources.
 Importing a channel that already exists appends the new sources (duplicates
-are skipped). When a source fails or does not start within 20 seconds, the
-player tries the next one. The source button in the player (`1/3`) switches
-sources by hand.
-
-Long-press a channel, or use its menu, to edit or delete it.
+are skipped). When a source fails, does not start within 20 seconds, or
+buffers for 20 seconds, the player tries the next one. The source button in
+the player (`1/3`) switches sources by hand.
 
 Plain `http://` streams are allowed: `android:usesCleartextTraffic="true"` on
 Android and `NSAllowsArbitraryLoadsForMedia` (media playback only) on iOS and macOS.
@@ -105,14 +134,16 @@ lib/
   app/                      app widget, theme, routes and bindings
   core/                     helpers, platform setup (video / database backends, full screen)
   data/
-    models/                 Channel
-    sources/                sqflite database (schema v2), playlist loader (file / URL)
+    models/                 Channel, Playlist
+    sources/                sqflite database (schema v3), playlist loader (file / URL)
     repositories/           ChannelRepository (interface + sqflite implementation)
     parsers/                channel list / M3U parser
   features/
     player/                 PlayerController (video_player wrapper) and PlayerView
-    home/                   HomeController, HomePage and its widgets
-    channel_editor/         add / edit channel page
+    home/                   HomeController, HomePage, desktop menu, phone browser
+    channel_editor/         add / edit one channel and its sources
+    playlist_import/        add a playlist from a URL, file or text
+    manage/                 library: playlists and channels
 ```
 
 Controllers get their dependencies through the constructor, so tests use an
@@ -150,4 +181,8 @@ The logo is downloaded from [flaticon](https://www.flaticon.com/)
 
 - [x] multiple sources per channel with automatic fallback
 
-- [ ] refresh imported playlists from their URL
+- [x] refresh imported playlists from their URL
+
+- [x] favorites, recently watched, search
+
+- [ ] refresh URL playlists automatically

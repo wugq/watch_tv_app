@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tv/features/home/widgets/category_label.dart';
+import 'package:tv/data/models/channel.dart';
+import 'package:tv/features/home/library_section.dart';
+import 'package:tv/widgets/favorite_button.dart';
 import 'package:tv/features/player/player_controller.dart';
 
 class NowPlayingBar extends StatelessWidget {
   final PlayerController player;
+  final ValueChanged<Channel> onToggleFavorite;
 
-  const NowPlayingBar({super.key, required this.player});
+  const NowPlayingBar({
+    super.key,
+    required this.player,
+    required this.onToggleFavorite,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
       child: Obx(() {
         final channel = player.channel.value;
         return Row(
@@ -43,6 +50,11 @@ class NowPlayingBar extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             _StatusChip(status: player.status.value),
+            if (channel != null)
+              FavoriteButton(
+                favorite: channel.favorite,
+                onPressed: () => onToggleFavorite(channel),
+              ),
           ],
         );
       }),
