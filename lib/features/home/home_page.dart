@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:tv/app/theme.dart';
 import 'package:tv/features/home/home_controller.dart';
 import 'package:tv/features/home/widgets/mobile_browser.dart';
 import 'package:tv/features/home/widgets/navigation_menu.dart';
@@ -299,16 +300,21 @@ class _FullscreenViewState extends State<_FullscreenView> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: _hideMenu,
-                  child: const ColoredBox(color: Colors.black26),
+                  child: const SizedBox.expand(),
                 ),
               ),
               Positioned(
                 left: 0,
                 top: 0,
                 bottom: 0,
-                child: NavigationMenu(
-                  controller: controller,
-                  onDone: _hideMenu,
+                // Dark over the video, whatever the app theme.
+                child: Theme(
+                  data: AppTheme.dark(),
+                  child: NavigationMenu(
+                    controller: controller,
+                    onDone: _hideMenu,
+                    overVideo: true,
+                  ),
                 ),
               ),
             ],
