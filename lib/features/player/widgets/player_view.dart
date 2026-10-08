@@ -369,6 +369,16 @@ class _ControlBar extends StatelessWidget {
                   _Timeline(controller: controller, onSeek: onInteraction),
                   Row(
                     children: [
+                      // Next to the menu, which opens on the left.
+                      if (onShowChannels != null)
+                        IconButton(
+                          tooltip: 'Channels',
+                          onPressed: onShowChannels,
+                          icon: const Icon(Icons.playlist_play_rounded),
+                        ),
+                      if (onToggleFavorite != null) _favoriteButton(),
+                      if (onShowChannels != null || onToggleFavorite != null)
+                        const _BarDivider(),
                       _playButton(),
                       if (!compact && onPreviousChannel != null)
                         IconButton(
@@ -391,13 +401,6 @@ class _ControlBar extends StatelessWidget {
                       if (!compact) _LiveBadge(controller: controller),
                       Expanded(child: _title(compact)),
                       _sourceButton(compact),
-                      if (onToggleFavorite != null) _favoriteButton(),
-                      if (onShowChannels != null)
-                        IconButton(
-                          tooltip: 'Channels',
-                          onPressed: onShowChannels,
-                          icon: const Icon(Icons.playlist_play_rounded),
-                        ),
                       IconButton(
                         tooltip: isFullscreen
                             ? 'Exit full screen'
@@ -507,6 +510,21 @@ class _ControlBar extends StatelessWidget {
         onPressed: () => onToggleFavorite!(channel),
       );
     });
+  }
+}
+
+/// Separates the menu buttons from the playback buttons.
+class _BarDivider extends StatelessWidget {
+  const _BarDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 28,
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      color: Colors.white30,
+    );
   }
 }
 
