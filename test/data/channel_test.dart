@@ -42,4 +42,15 @@ void main() {
     expect(merged.urls, ['http://x/1', 'http://x/2', 'http://x/3']);
     expect(merged.category, 'News');
   });
+
+  test('categories splits on ";" and drops blanks and duplicates', () {
+    final channel = Channel.create(
+      name: 'A',
+      urls: ['http://x'],
+      category: ' Kids ;Music;; Kids',
+    );
+
+    expect(channel.category, 'Kids;Music');
+    expect(channel.categories, ['Kids', 'Music']);
+  });
 }

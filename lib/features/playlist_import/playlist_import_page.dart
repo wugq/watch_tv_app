@@ -220,6 +220,15 @@ class _PreviewCard extends StatelessWidget {
               onPressed: controller.save,
               label: 'Add ${preview.channels.length} channels',
             ),
+            Obx(() {
+              final error = controller.saveError.value;
+              return error == null
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _ErrorText(error),
+                    );
+            }),
           ],
         ),
       ),

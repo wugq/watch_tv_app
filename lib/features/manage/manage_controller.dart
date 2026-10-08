@@ -37,7 +37,7 @@ class ManageController extends GetxController {
         .where(
           (c) =>
               c.name.toLowerCase().contains(needle) ||
-              categoryLabel(c.category).toLowerCase().contains(needle),
+              categoriesLabel(c).toLowerCase().contains(needle),
         )
         .toList();
   }
@@ -82,7 +82,7 @@ class ManageController extends GetxController {
     refreshingId.value = playlist.id;
     try {
       final loaded = await _loader.fromUrl(url);
-      final parsed = ChannelListParser.parse(loaded.text);
+      final parsed = await ChannelListParser.parseInBackground(loaded.text);
       if (parsed.isEmpty) {
         _showMessage('No channel found in ${playlist.name}. Nothing changed.');
         return;
@@ -92,6 +92,8 @@ class ManageController extends GetxController {
       await load();
     } on PlaylistLoadException catch (e) {
       _showMessage('${playlist.name}: ${e.message}');
+    } catch (e) {
+      _showMessage('${playlist.name}: could not refresh ($e)');
     } finally {
       refreshingId.value = null;
     }

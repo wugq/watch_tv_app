@@ -27,13 +27,24 @@ class HomeController extends GetxController with WindowListener {
   final isLoading = true.obs;
   final isFullscreen = false.obs;
 
-  List<String> get categories {
-    final seen = <String>{};
-    return [
-      for (final channel in channels)
-        if (seen.add(channel.category)) channel.category,
-    ];
+  /// Channels per category, in order of first use. Rebuilt when
+  /// [channels] changes; large playlists have thousands of channels and the
+  /// menu reads this on every build.
+  Map<String, List<Channel>>? _byCategory;
+
+  Map<String, List<Channel>> get _categoryIndex {
+    return _byCategory ??= () {
+      final index = <String, List<Channel>>{};
+      for (final channel in channels) {
+        for (final category in channel.categories) {
+          (index[category] ??= []).add(channel);
+        }
+      }
+      return index;
+    }();
   }
+
+  List<String> get categories => _categoryIndex.keys.toList();
 
   /// Favorites, recent and all channels, then one section per category.
   List<LibrarySection> get sections => [
@@ -54,7 +65,7 @@ class HomeController extends GetxController with WindowListener {
       case SectionKind.all:
         return channels;
       case SectionKind.category:
-        return channels.where((c) => c.category == section.category).toList();
+        return _categoryIndex[section.category] ?? const [];
     }
   }
 
@@ -68,7 +79,7 @@ class HomeController extends GetxController with WindowListener {
         .where(
           (c) =>
               c.name.toLowerCase().contains(needle) ||
-              categoryLabel(c.category).toLowerCase().contains(needle),
+              categoriesLabel(c).toLowerCase().contains(needle),
         )
         .toList();
   }
@@ -82,6 +93,7 @@ class HomeController extends GetxController with WindowListener {
   @override
   void onInit() {
     super.onInit();
+    ever(channels, (_) => _byCategory = null);
     if (isDesktop) {
       windowManager.addListener(this);
     }
@@ -133,6 +145,7 @@ class HomeController extends GetxController with WindowListener {
   Future<void> reload() async {
     isLoading.value = true;
     channels.assignAll(await _repository.getAll());
+    _byCategory = null;
     // Keep the player's copy in sync, e.g. after sources were imported.
     final current = player.channel.value;
     final fresh = channels.firstWhereOrNull((c) => c.key == current?.key);
@@ -176,6 +189,7 @@ class HomeController extends GetxController with WindowListener {
     final index = channels.indexWhere((c) => c.key == updated.key);
     if (index >= 0) {
       channels[index] = updated;
+      _byCategory = null;
     }
     if (player.channel.value?.key == updated.key) {
       player.channel.value = updated;
@@ -242,6 +256,7 @@ class HomeController extends GetxController with WindowListener {
 
   Future<void> _afterDelete(Channel channel) async {
     channels.removeWhere((c) => c.key == channel.key);
+    _byCategory = null;
     if (section.value.kind == SectionKind.category &&
         !categories.contains(section.value.category)) {
       section.value = LibrarySection.all;

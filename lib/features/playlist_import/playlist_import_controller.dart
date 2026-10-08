@@ -21,7 +21,7 @@ class ImportPreview {
   int get sourceCount => channels.fold(0, (sum, c) => sum + c.urls.length);
 
   List<String> get categories =>
-      channels.map((c) => c.category).toSet().toList();
+      channels.expand((c) => c.categories).toSet().toList();
 }
 
 /// Imports an M3U / TXT playlist from a URL, a file or pasted text.
@@ -42,6 +42,7 @@ class PlaylistImportController extends GetxController {
   final isLoading = false.obs;
   final isSaving = false.obs;
   final error = RxnString();
+  final saveError = RxnString();
   final preview = Rxn<ImportPreview>();
 
   @override
@@ -90,6 +91,7 @@ class PlaylistImportController extends GetxController {
   void clear() {
     preview.value = null;
     error.value = null;
+    saveError.value = null;
   }
 
   Future<void> save() async {
@@ -98,19 +100,24 @@ class PlaylistImportController extends GetxController {
       return;
     }
     final category = categoryText.text.trim();
-    final channels = ChannelListParser.parse(
-      current.playlist.text,
-      defaultCategory: category.isEmpty ? null : category,
-    );
     final name = nameText.text.trim();
     isSaving.value = true;
+    saveError.value = null;
     try {
+      final channels = category.isEmpty
+          ? current.channels
+          : await ChannelListParser.parseInBackground(
+              current.playlist.text,
+              defaultCategory: category,
+            );
       await _repository.addPlaylist(
         name: name.isEmpty ? current.playlist.source : name,
         url: current.url,
         channels: channels,
       );
       Get.back(result: true);
+    } catch (e) {
+      saveError.value = 'Could not save the playlist: $e';
     } finally {
       isSaving.value = false;
     }
@@ -130,7 +137,7 @@ class PlaylistImportController extends GetxController {
       if (playlist == null) {
         return;
       }
-      final channels = ChannelListParser.parse(playlist.text);
+      final channels = await ChannelListParser.parseInBackground(playlist.text);
       if (channels.isEmpty) {
         preview.value = null;
         error.value =
@@ -142,6 +149,8 @@ class PlaylistImportController extends GetxController {
       nameText.text = suggestName(playlist.source);
     } on PlaylistLoadException catch (e) {
       error.value = e.message;
+    } catch (e) {
+      error.value = 'Could not read the playlist: $e';
     } finally {
       isLoading.value = false;
     }

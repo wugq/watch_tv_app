@@ -1,3 +1,5 @@
+import 'dart:isolate';
+
 import 'package:tv/data/models/channel.dart';
 
 /// Parses a channel list from a file, a URL or pasted text.
@@ -15,6 +17,28 @@ import 'package:tv/data/models/channel.dart';
 /// line wins.
 class ChannelListParser {
   static final _groupTitle = RegExp(r'group-title="([^"]*)"');
+
+  /// `#EXTINF:-1 key="value" key="value",Name`. Attribute values may contain
+  /// commas (for example `http-user-agent`), and so may the name.
+  static final _extinf = RegExp(
+    r'^#EXTINF:\s*-?[\d.]+((?:\s+[\w-]+="[^"]*")*)\s*,(.*)$',
+  );
+
+  /// Larger texts are parsed in a background isolate so the UI stays
+  /// responsive.
+  static const _backgroundThreshold = 256 * 1024;
+
+  /// [parse] off the UI thread for large playlists.
+  static Future<List<Channel>> parseInBackground(
+    String text, {
+    String? defaultCategory,
+  }) {
+    if (text.length < _backgroundThreshold) {
+      return Future.value(parse(text, defaultCategory: defaultCategory));
+    }
+    return Isolate.run(() => parse(text, defaultCategory: defaultCategory));
+  }
+
   static final _urlSeparator = RegExp(r'#(?=[a-zA-Z][a-zA-Z0-9+.-]*://)');
 
   static List<Channel> parse(String text, {String? defaultCategory}) {
@@ -72,8 +96,13 @@ class ChannelListParser {
     String? category;
     for (final line in lines) {
       if (line.startsWith('#EXTINF')) {
-        final comma = line.lastIndexOf(',');
-        name = comma >= 0 ? line.substring(comma + 1).trim() : null;
+        final match = _extinf.firstMatch(line);
+        if (match != null) {
+          name = match.group(2)!.trim();
+        } else {
+          final comma = line.lastIndexOf(',');
+          name = comma >= 0 ? line.substring(comma + 1).trim() : null;
+        }
         category = _groupTitle.firstMatch(line)?.group(1)?.trim();
       } else if (line.startsWith('#')) {
         continue;

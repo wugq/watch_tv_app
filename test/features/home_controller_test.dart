@@ -61,6 +61,27 @@ void main() {
     ]);
   });
 
+  test('a channel with several categories is in each of them', () async {
+    await repository.import([
+      Channel.create(
+        name: 'Kids Music',
+        urls: ['http://x/k'],
+        category: 'Kids;Music',
+      ),
+    ]);
+    await controller.reload();
+
+    expect(controller.categories, containsAll(['Kids', 'Music']));
+    expect(
+      controller.channelsIn(const LibrarySection.category('Music')).single.name,
+      'Kids Music',
+    );
+    expect(
+      controller.channelsIn(const LibrarySection.category('Kids')).single.name,
+      'Kids Music',
+    );
+  });
+
   test('search matches name and category, ignoring case', () {
     expect(controller.search('cctv'), [news]);
     expect(controller.search('SPORT'), [sport]);

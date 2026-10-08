@@ -362,7 +362,7 @@ class _ChannelRow extends StatelessWidget {
           : null,
       title: Text(channel.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(
-        '${categoryLabel(channel.category)} · '
+        '${categoriesLabel(channel)} · '
         '${sources == 1 ? '1 source' : '$sources sources'}',
       ),
       onTap: selecting

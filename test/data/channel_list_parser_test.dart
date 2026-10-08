@@ -113,4 +113,50 @@ void main() {
     expect(ChannelListParser.isStreamUrl('example.com/a.m3u8'), isFalse);
     expect(ChannelListParser.isStreamUrl('http://'), isFalse);
   });
+
+  group('iptv-org style M3U', () {
+    test('keeps commas in attribute values and in the name', () {
+      final channels = ChannelListParser.parse(
+        '#EXTM3U\n'
+        '#EXTINF:-1 tvg-id="a" http-user-agent="Mozilla/5.0 (KHTML, like '
+        'Gecko)" group-title="News",Channel, The\n'
+        'http://example.com/a.m3u8\n'
+        '#EXTINF:-1,Plain, Name\n'
+        'http://example.com/b.m3u8\n',
+      );
+
+      expect(channels.map((c) => c.name), ['Channel, The', 'Plain, Name']);
+      expect(channels.first.category, 'News');
+    });
+
+    test('several categories in group-title', () {
+      final channels = ChannelListParser.parse(
+        '#EXTM3U\n'
+        '#EXTINF:-1 group-title="Entertainment; Family;General",A\n'
+        'http://example.com/a.m3u8\n',
+      );
+
+      expect(channels.single.categories, [
+        'Entertainment',
+        'Family',
+        'General',
+      ]);
+    });
+  });
+
+  test('parseInBackground gives the same result for large texts', () async {
+    final text = [
+      '#EXTM3U',
+      for (var i = 0; i < 6000; i++) ...[
+        '#EXTINF:-1 group-title="G${i % 7}",Channel $i',
+        'http://example.com/$i.m3u8',
+      ],
+    ].join('\n');
+
+    final channels = await ChannelListParser.parseInBackground(text);
+
+    expect(text.length, greaterThan(256 * 1024));
+    expect(channels, hasLength(6000));
+    expect(channels.last.name, 'Channel 5999');
+  });
 }

@@ -58,3 +58,8 @@ class LibrarySection {
 String categoryLabel(String category) {
   return category == Channel.defaultCategory ? 'Uncategorized' : category;
 }
+
+/// All categories of [channel], for display.
+String categoriesLabel(Channel channel) {
+  return channel.categories.map(categoryLabel).join(', ');
+}

@@ -230,28 +230,52 @@ class SqfliteChannelRepository implements ChannelRepository {
     });
   }
 
+  /// Adds or merges [channels] with one batch, so a playlist with
+  /// thousands of channels is saved in one round trip to the database.
   Future<ImportResult> _import(
     Transaction txn,
     Iterable<Channel> channels,
     int? playlistId,
   ) async {
+    final existing = {
+      for (final row in await txn.query(_channels, columns: ['key']))
+        row['key'] as String,
+    };
+    final nextPosition = {
+      for (final row in await txn.rawQuery(
+        'SELECT channel_key, MAX(position) AS last FROM $_sources '
+        'GROUP BY channel_key',
+      ))
+        row['channel_key'] as String: (row['last'] as int) + 1,
+    };
     var added = 0;
     var updated = 0;
+    final batch = txn.batch();
     for (final channel in channels) {
-      final updatedRows = await txn.update(
-        _channels,
-        {'category': channel.category},
-        where: 'key = ?',
-        whereArgs: [channel.key],
-      );
-      if (updatedRows == 0) {
-        await txn.insert(_channels, _channelRow(channel));
+      if (existing.add(channel.key)) {
+        batch.insert(_channels, _channelRow(channel));
         added++;
       } else {
+        batch.update(
+          _channels,
+          {'category': channel.category},
+          where: 'key = ?',
+          whereArgs: [channel.key],
+        );
         updated++;
       }
-      await _appendSources(txn, channel, playlistId);
+      var position = nextPosition[channel.key] ?? 0;
+      for (final url in channel.urls) {
+        batch.insert(_sources, {
+          'channel_key': channel.key,
+          'position': position++,
+          'url': url,
+          'playlist_id': playlistId,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      }
+      nextPosition[channel.key] = position;
     }
+    await batch.commit(noResult: true);
     return ImportResult(added: added, updated: updated);
   }
 

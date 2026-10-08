@@ -37,10 +37,10 @@ class NowPlayingBar extends StatelessWidget {
                   if (channel != null)
                     Text(
                       channel.urls.length > 1
-                          ? '${categoryLabel(channel.category)} · '
+                          ? '${categoriesLabel(channel)} · '
                                 'Source ${player.sourceIndex.value + 1} of '
                                 '${channel.urls.length}'
-                          : categoryLabel(channel.category),
+                          : categoriesLabel(channel),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

@@ -33,7 +33,7 @@ class ChannelTile extends StatelessWidget {
     final scheme = theme.colorScheme;
     final sources = channel.urls.length;
     final details = [
-      if (showCategory) categoryLabel(channel.category),
+      if (showCategory) categoriesLabel(channel),
       if (sources > 1) '$sources sources',
     ].join(' · ');
 

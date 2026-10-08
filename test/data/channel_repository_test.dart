@@ -227,4 +227,27 @@ void main() {
       await v2.close();
     });
   });
+
+  test('imports a large playlist in one batch', () async {
+    final channels = [
+      for (var i = 0; i < 12000; i++)
+        channel('Channel $i', ['http://x/$i', 'http://y/$i'], 'G${i % 9}'),
+    ];
+
+    final result = await repository.addPlaylist(
+      name: 'big',
+      channels: channels,
+    );
+    // Again: everything already exists, only new sources are added.
+    final again = await repository.import([
+      channel('Channel 5', ['http://x/5', 'http://z/5']),
+    ]);
+
+    expect(result.added, 12000);
+    expect(again.updated, 1);
+    final all = await repository.getAll();
+    expect(all, hasLength(12000));
+    expect(all[5].urls, ['http://x/5', 'http://y/5', 'http://z/5']);
+    expect((await repository.getPlaylists()).single.sourceCount, 24000);
+  });
 }

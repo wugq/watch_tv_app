@@ -35,13 +35,28 @@ class Channel {
     required List<String> urls,
     String? category,
   }) {
-    final trimmedCategory = category?.trim() ?? '';
+    final parts = _splitCategories(category ?? '');
     return Channel(
       key: sha1Of(name),
       name: name,
-      category: trimmedCategory.isEmpty ? defaultCategory : trimmedCategory,
+      category: parts.isEmpty ? defaultCategory : parts.join(';'),
       urls: _unique(urls),
     );
+  }
+
+  /// [category] can hold several categories separated by `;`, as in
+  /// iptv-org playlists (`group-title="Kids;Music"`).
+  List<String> get categories {
+    final parts = _splitCategories(category);
+    return parts.isEmpty ? const [defaultCategory] : parts;
+  }
+
+  static List<String> _splitCategories(String value) {
+    final seen = <String>{};
+    return [
+      for (final part in value.split(';').map((p) => p.trim()))
+        if (part.isNotEmpty && seen.add(part)) part,
+    ];
   }
 
   /// Returns a copy with the sources of [other] appended (duplicates
