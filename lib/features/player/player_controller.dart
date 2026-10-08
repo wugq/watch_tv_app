@@ -34,10 +34,16 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   /// How long the stream may buffer before the next source is tried.
   final Duration stallTimeout;
 
+  /// Pause when the app leaves the foreground. Mobile only: on desktop the
+  /// app becomes `inactive` whenever the window loses focus or switches to
+  /// full screen, and playback should continue then.
+  final bool pauseInBackground;
+
   PlayerController({
     VideoControllerFactory? createVideoController,
     this.errorsAreFatal = true,
     this.stallTimeout = const Duration(seconds: 20),
+    this.pauseInBackground = true,
   }) : _createVideoController =
            createVideoController ?? VideoPlayerController.networkUrl;
 
@@ -87,6 +93,9 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!pauseInBackground) {
+      return;
+    }
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {

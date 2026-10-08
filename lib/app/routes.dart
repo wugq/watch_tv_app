@@ -17,7 +17,12 @@ final appPages = [
     name: Routes.home,
     page: () => const HomePage(),
     binding: BindingsBuilder(() {
-      Get.put(PlayerController(errorsAreFatal: !usesMediaKit));
+      Get.put(
+        PlayerController(
+          errorsAreFatal: !usesMediaKit,
+          pauseInBackground: !isDesktop,
+        ),
+      );
       Get.put(HomeController(Get.find(), Get.find()));
     }),
   ),

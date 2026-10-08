@@ -147,4 +147,33 @@ void main() {
     expect(player.sourceIndex.value, 2);
     expect(opened.last, 'http://good/3');
   });
+
+  group('app lifecycle', () {
+    test('pauses when the app becomes inactive on mobile', () async {
+      await player.play(channel, source: 1);
+      await pumpEventQueue();
+
+      player.didChangeAppLifecycleState(AppLifecycleState.inactive);
+
+      expect(controllers.last.value.isPlaying, isFalse);
+    });
+
+    test('keeps playing on desktop (focus loss, full screen)', () async {
+      player = PlayerController(
+        pauseInBackground: false,
+        createVideoController: (uri) {
+          final controller = FakeVideoController(uri, fails: false);
+          controllers.add(controller);
+          return controller;
+        },
+      );
+      await player.play(channel, source: 1);
+      await pumpEventQueue();
+
+      player.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      player.didChangeAppLifecycleState(AppLifecycleState.hidden);
+
+      expect(controllers.last.value.isPlaying, isTrue);
+    });
+  });
 }
