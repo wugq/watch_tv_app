@@ -23,16 +23,20 @@ class HomePage extends GetView<HomeController> {
     return Focus(
       autofocus: true,
       onKeyEvent: (node, event) => _handleKey(event),
-      child: Obx(() {
-        if (controller.isFullscreen.value) {
-          return _FullscreenView(controller: controller);
-        }
-        return LayoutBuilder(
-          builder: (context, constraints) => isWide(constraints.biggest)
-              ? _WideView(controller: controller)
-              : _CompactView(controller: controller),
-        );
-      }),
+      child: LayoutBuilder(
+        builder: (context, constraints) => Obx(() {
+          if (controller.isFullscreen.value) {
+            return _TheaterView(controller: controller, fullscreen: true);
+          }
+          if (!isWide(constraints.biggest)) {
+            return _CompactView(controller: controller);
+          }
+          if (controller.channels.isEmpty && !controller.isLoading.value) {
+            return _EmptyWideView(controller: controller);
+          }
+          return _TheaterView(controller: controller, fullscreen: false);
+        }),
+      ),
     );
   }
 
@@ -50,10 +54,17 @@ class HomePage extends GetView<HomeController> {
     } else if (key == LogicalKeyboardKey.keyF) {
       controller.toggleFullscreen();
     } else if (key == LogicalKeyboardKey.escape) {
-      if (!controller.isFullscreen.value) {
+      if (controller.menuVisible.value) {
+        controller.menuVisible.value = false;
+      } else if (controller.isFullscreen.value) {
+        controller.setFullscreen(false);
+      } else {
         return KeyEventResult.ignored;
       }
-      controller.setFullscreen(false);
+    } else if (key == LogicalKeyboardKey.keyM) {
+      player.toggleMute();
+    } else if (key == LogicalKeyboardKey.keyC) {
+      controller.menuVisible.toggle();
     } else if (key == LogicalKeyboardKey.arrowUp ||
         key == LogicalKeyboardKey.channelUp) {
       controller.playAdjacent(-1);
@@ -74,74 +85,24 @@ class HomePage extends GetView<HomeController> {
   }
 }
 
-/// Sidebar menu on the left, large player on the right.
-class _WideView extends StatelessWidget {
+/// Wide screen without channels: the menu as a sidebar next to the
+/// empty state, so adding a playlist is one click away.
+class _EmptyWideView extends StatelessWidget {
   final HomeController controller;
 
-  const _WideView({required this.controller});
+  const _EmptyWideView({required this.controller});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Stack(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(width: NavigationMenu.sidebarWidth),
-                Expanded(
-                  child: Obx(
-                    () =>
-                        controller.channels.isEmpty &&
-                            !controller.isLoading.value
-                        ? EmptyLibrary(controller: controller)
-                        : _PlayerArea(controller: controller),
-                  ),
-                ),
-              ],
-            ),
-            // On top of the player, so the second level can open over it.
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              child: NavigationMenu(controller: controller),
-            ),
+            NavigationMenu(controller: controller),
+            Expanded(child: EmptyLibrary(controller: controller)),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _PlayerArea extends StatelessWidget {
-  final HomeController controller;
-
-  const _PlayerArea({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: PlayerView(
-                controller: controller.player,
-                isFullscreen: false,
-                onToggleFullscreen: controller.toggleFullscreen,
-              ),
-            ),
-          ),
-          NowPlayingBar(
-            player: controller.player,
-            onToggleFavorite: controller.toggleFavorite,
-          ),
-        ],
       ),
     );
   }
@@ -244,83 +205,85 @@ class _CompactViewState extends State<_CompactView> {
   }
 }
 
-/// Player only. The menu slides in when the pointer touches the left edge,
-/// or from the menu button in the control bar.
-class _FullscreenView extends StatefulWidget {
+/// The video fills the window (or the screen in full screen). The menu
+/// slides in over it when the pointer touches the left edge, from the
+/// channels button in the control bar, or with the C key.
+class _TheaterView extends StatelessWidget {
   final HomeController controller;
+  final bool fullscreen;
 
-  const _FullscreenView({required this.controller});
+  const _TheaterView({required this.controller, required this.fullscreen});
 
-  @override
-  State<_FullscreenView> createState() => _FullscreenViewState();
-}
+  void _hideMenu() => controller.menuVisible.value = false;
 
-class _FullscreenViewState extends State<_FullscreenView> {
-  bool _menuVisible = false;
-
-  void _showMenu() => setState(() => _menuVisible = true);
-
-  void _hideMenu() {
-    if (mounted && _menuVisible) setState(() => _menuVisible = false);
-  }
+  void _showMenu() => controller.menuVisible.value = true;
 
   @override
   Widget build(BuildContext context) {
-    final controller = widget.controller;
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (_menuVisible) {
-          _hideMenu();
-        } else {
-          controller.setFullscreen(false);
-        }
-      },
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: PlayerView(
-                controller: controller.player,
-                isFullscreen: true,
-                onToggleFullscreen: controller.toggleFullscreen,
-                onShowChannels: _showMenu,
-              ),
-            ),
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 12,
-              child: MouseRegion(opaque: false, onEnter: (_) => _showMenu()),
-            ),
-            if (_menuVisible) ...[
+    return Obx(() {
+      final menuVisible = controller.menuVisible.value;
+      return PopScope(
+        canPop: !menuVisible && !fullscreen,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          if (menuVisible) {
+            _hideMenu();
+          } else {
+            controller.setFullscreen(false);
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
               Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _hideMenu,
-                  child: const SizedBox.expand(),
+                child: PlayerView(
+                  controller: controller.player,
+                  isFullscreen: fullscreen,
+                  onToggleFullscreen: controller.toggleFullscreen,
+                  onShowChannels: _showMenu,
+                  onPreviousChannel: () => controller.playAdjacent(-1),
+                  onNextChannel: () => controller.playAdjacent(1),
+                  onToggleFavorite: controller.toggleFavorite,
                 ),
               ),
               Positioned(
                 left: 0,
                 top: 0,
                 bottom: 0,
-                // Dark over the video, whatever the app theme.
-                child: Theme(
-                  data: AppTheme.dark(),
-                  child: NavigationMenu(
-                    controller: controller,
-                    onDone: _hideMenu,
-                    overVideo: true,
+                width: 12,
+                child: MouseRegion(opaque: false, onEnter: (_) => _showMenu()),
+              ),
+              if (menuVisible) ...[
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _hideMenu,
+                    child: const SizedBox.expand(),
                   ),
                 ),
-              ),
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  // Dark over the video, whatever the app theme.
+                  child: Theme(
+                    data: AppTheme.dark(),
+                    child: SafeArea(
+                      right: false,
+                      child: NavigationMenu(
+                        controller: controller,
+                        onDone: _hideMenu,
+                        overVideo: true,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }

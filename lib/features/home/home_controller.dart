@@ -36,6 +36,9 @@ class HomeController extends GetxController with WindowListener {
   final isLoading = true.obs;
   final isFullscreen = false.obs;
 
+  /// The channel menu over the video (wide screens and full screen).
+  final menuVisible = false.obs;
+
   _Index? _cache;
 
   /// Visible channels per category, rebuilt after any change. Large

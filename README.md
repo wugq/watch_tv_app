@@ -30,10 +30,17 @@ or the eye in the library). Hidden channels stay in the library and can be
 shown again at any time; favorites and your own categories keep showing
 channels from hidden categories.
 
-On wide screens (desktop, tablets, phones in landscape) a sidebar lists the
-sections. Pointing at a section opens a second panel with its channels, like
-a start menu; clicking a section keeps the panel open. In full screen, move
-the pointer to the left edge (or use the menu button) to open the same menu.
+On wide screens (desktop, tablets, phones in landscape) the video fills the
+window. Move the pointer to the left edge (or use the channels button in the
+control bar) to open the menu over the video: a sidebar with the sections.
+Pointing at a section opens a second panel with its channels, like a start
+menu; clicking a section keeps the panel open. The full screen button makes
+the video fill the whole screen with the same menu.
+
+The control bar at the bottom has play / pause, previous / next channel,
+volume, the next source and favorite buttons, and a seek bar for streams
+with a fixed length. With a mouse, a click on the video pauses or plays and
+a double click toggles full screen.
 
 On phones, section chips sit above the channel list, and the grid button
 opens all sections in a sheet.
@@ -138,7 +145,9 @@ media_kit downloads prebuilt libmpv binaries during the build.
 |---|---|
 | Space | Play / pause |
 | F | Full screen |
-| Esc | Exit full screen |
+| Esc | Close the menu, exit full screen |
+| C | Show / hide the channel menu |
+| M | Mute / unmute |
 | Up / Down | Previous / next channel |
 | S | Next source |
 

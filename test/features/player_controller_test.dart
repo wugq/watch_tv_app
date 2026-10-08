@@ -32,6 +32,11 @@ class FakeVideoController extends VideoPlayerController {
     value = value.copyWith(isPlaying: false);
   }
 
+  @override
+  Future<void> setVolume(double volume) async {
+    value = value.copyWith(volume: volume);
+  }
+
   /// Same as video_player on an error event: the whole value is replaced.
   void fail() {
     value = VideoPlayerValue.erroneous('stream ended');
@@ -200,5 +205,23 @@ void main() {
     );
 
     expect(received.single, {'User-Agent': 'UA', 'Referer': 'https://r/'});
+  });
+
+  test('keeps volume and mute when the source changes', () async {
+    await player.play(channel, source: 1);
+    await pumpEventQueue();
+
+    player.setVolume(0.4);
+    expect(controllers.last.value.volume, 0.4);
+
+    player.toggleMute();
+    expect(controllers.last.value.volume, 0);
+
+    await player.nextSource();
+    await pumpEventQueue();
+    expect(controllers.last.value.volume, 0, reason: 'still muted');
+
+    player.toggleMute();
+    expect(controllers.last.value.volume, 0.4);
   });
 }

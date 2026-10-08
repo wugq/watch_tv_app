@@ -376,12 +376,41 @@ void main() {
   });
 
   group('desktop', () {
+    testWidgets('shows the menu next to the empty state', (tester) async {
+      await pumpApp(tester, const [], size: desktop);
+
+      expect(find.byType(NavigationMenu), findsOneWidget);
+      expect(find.text('No channels yet'), findsOneWidget);
+    });
+
+    testWidgets('control bar switches channels and mutes', (tester) async {
+      final player = await pumpApp(tester, [alpha, beta], size: desktop);
+
+      await tester.tap(find.byTooltip('Next channel'));
+      await tester.pump();
+      expect(player.channel.value?.name, 'Beta');
+
+      await tester.tap(find.byTooltip('Previous channel'));
+      await tester.pump();
+      expect(player.channel.value?.name, 'Alpha');
+
+      await tester.tap(find.byTooltip('Mute'));
+      await tester.pump();
+      expect(player.muted.value, isTrue);
+      expect(find.byTooltip('Unmute'), findsOneWidget);
+    });
+
     testWidgets('pointing at a category opens its channels', (tester) async {
       final player = await pumpApp(tester, [alpha, beta], size: desktop);
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await mouse.addPointer(location: const Offset(900, 400));
       addTearDown(mouse.removePointer);
 
+      expect(find.byType(NavigationMenu), findsNothing, reason: 'video only');
+
+      // The menu slides in when the pointer touches the left edge.
+      await mouse.moveTo(const Offset(4, 400));
+      await tester.pumpAndSettle();
       expect(find.text('Beta'), findsNothing, reason: 'panel closed');
 
       await mouse.moveTo(tester.getCenter(inMenu('Sport').first));
@@ -392,17 +421,16 @@ void main() {
       await tester.pump();
       expect(player.channel.value?.name, 'Beta');
 
-      // Leaving the menu closes the panel.
-      await mouse.moveTo(tester.getCenter(inMenu('Sport').first));
-      await tester.pump(const Duration(milliseconds: 200));
-      await mouse.moveTo(const Offset(900, 400));
-      await tester.pump(const Duration(milliseconds: 500));
-      expect(inMenu('Beta'), findsNothing);
+      // Choosing a channel hides the menu.
+      await tester.pumpAndSettle();
+      expect(find.byType(NavigationMenu), findsNothing);
     });
 
     testWidgets('clicking a section keeps its panel open', (tester) async {
       await pumpApp(tester, [alpha, beta], size: desktop);
 
+      await tester.tap(find.byTooltip('Channels'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('All channels'));
       await tester.pump(const Duration(milliseconds: 600));
 
@@ -431,6 +459,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('All channels'), findsOneWidget);
 
+      // Escape closes the menu first, then leaves full screen.
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.text('All channels'), findsNothing);
+      expect(controller.isFullscreen.value, isTrue);
+
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
       expect(controller.isFullscreen.value, isFalse);
@@ -439,6 +473,8 @@ void main() {
     testWidgets('typing in search does not trigger shortcuts', (tester) async {
       final player = await pumpApp(tester, [alpha, beta], size: desktop);
 
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, 'f');
       await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
       await tester.pump();

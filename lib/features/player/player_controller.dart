@@ -84,6 +84,10 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
   /// Last known aspect ratio of the current stream.
   final aspectRatio = (16 / 9).obs;
 
+  /// Volume from 0 to 1. Kept when the channel changes.
+  final volume = 1.0.obs;
+  final muted = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -167,6 +171,7 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       return;
     }
     _updateAspectRatio(controller.value);
+    _applyVolume();
     isVideoReady.value = true;
     controller.addListener(_onVideoValueChanged);
     // Not awaited: with media_kit the returned future can take long.
@@ -208,6 +213,29 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
       controller.pause();
     } else {
       controller.play();
+    }
+  }
+
+  void setVolume(double value) {
+    volume.value = value.clamp(0.0, 1.0);
+    muted.value = volume.value == 0;
+    _applyVolume();
+  }
+
+  void toggleMute() {
+    if (muted.value && volume.value == 0) {
+      volume.value = 0.5;
+    }
+    muted.value = !muted.value;
+    _applyVolume();
+  }
+
+  void _applyVolume() {
+    final controller = video.value;
+    if (controller != null && controller.value.isInitialized) {
+      controller
+          .setVolume(muted.value ? 0 : volume.value)
+          .catchError((Object _) {});
     }
   }
 
