@@ -17,8 +17,18 @@ Add a live stream channel to this app and start watching.
 * **Favorites**: tap the star next to a channel. Favorites have their own
   section and are shown first when the app starts.
 * **Recently watched**: the last 30 channels you played.
-* **Categories**: from the playlist (`group-title` or `#genre#`).
+* **My categories**: categories you make yourself and fill with channels
+  you pick ("Add to category" in a channel menu, or select channels in the
+  library).
+* **Categories**: from the playlist (`group-title` or `#genre#`). A
+  `group-title` such as `Kids;Music` puts the channel in both categories.
 * **Search**: by channel name or category.
+
+Large playlists can be trimmed without deleting anything: hide the
+categories you do not watch, or single channels ("Hide" in a channel menu,
+or the eye in the library). Hidden channels stay in the library and can be
+shown again at any time; favorites and your own categories keep showing
+channels from hidden categories.
 
 On wide screens (desktop, tablets, phones in landscape) a sidebar lists the
 sections. Pointing at a section opens a second panel with its channels, like
@@ -59,11 +69,28 @@ The library page (video library icon) manages what you added:
 
 * **Playlists**: refresh (URL playlists), rename, delete. Deleting a playlist
   removes its sources; channels left without sources are deleted.
-* **Channels**: search, edit, star, delete. Long-press to select several
-  channels and delete them together.
+* **Categories**: your own categories (create, rename, delete) and a switch
+  per playlist category to show or hide it, plus "Show all" / "Hide all".
+* **Channels**: filter (all, hidden, a category), search, show or hide with
+  the eye, star, edit, delete. Long-press to select several channels and
+  hide, show, add to a category or delete them together.
 
-The channel editor lists all sources of a channel: add a URL, remove one, or
-move one up so it is tried earlier. It also has the delete button.
+The channel editor lists all sources of a channel: add a URL, edit one
+(including its HTTP headers), remove one, or move one up so it is tried
+earlier. It also has the delete button.
+
+## HTTP headers
+
+Some streams only play with a certain `User-Agent` or `Referer`. They are
+read from the playlist and sent with every request of that source:
+
+* M3U attributes `http-user-agent="..."` and `http-referrer="..."`
+* `#EXTVLCOPT:http-user-agent=...` and `#EXTVLCOPT:http-referrer=...` lines
+* `URL|User-Agent=...&Referer=...` (M3U and TXT, values may be
+  percent-encoded)
+
+Playlists imported before this version get their headers on the next
+refresh.
 
 ## Multiple sources
 
@@ -134,8 +161,8 @@ lib/
   app/                      app widget, theme, routes and bindings
   core/                     helpers, platform setup (video / database backends, full screen)
   data/
-    models/                 Channel, Playlist
-    sources/                sqflite database (schema v3), playlist loader (file / URL)
+    models/                 Channel, StreamSource, Playlist, CustomCategory
+    sources/                sqflite database (schema v4), playlist loader (file / URL)
     repositories/           ChannelRepository (interface + sqflite implementation)
     parsers/                channel list / M3U parser
   features/
@@ -184,5 +211,9 @@ The logo is downloaded from [flaticon](https://www.flaticon.com/)
 - [x] refresh imported playlists from their URL
 
 - [x] favorites, recently watched, search
+
+- [x] hide channels and categories, custom categories
+
+- [x] User-Agent / Referrer per source
 
 - [ ] refresh URL playlists automatically

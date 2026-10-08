@@ -53,4 +53,17 @@ void main() {
     expect(channel.category, 'Kids;Music');
     expect(channel.categories, ['Kids', 'Music']);
   });
+
+  test('merge keeps the first URL and fills missing headers', () {
+    final a = Channel.create(name: 'A', urls: ['http://x/1']);
+    final b = Channel.create(
+      name: 'A',
+      sources: [StreamSource('http://x/1', userAgent: 'UA')],
+    );
+
+    final merged = a.merge(b);
+
+    expect(merged.sources.single.userAgent, 'UA');
+    expect(merged.urls, ['http://x/1']);
+  });
 }

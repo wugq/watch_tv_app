@@ -3,7 +3,7 @@ import 'package:tv/data/models/channel.dart';
 import 'package:tv/features/home/library_section.dart';
 import 'package:tv/widgets/favorite_button.dart';
 
-enum _ChannelAction { edit, delete }
+enum _ChannelAction { edit, addToCategory, removeFromCategory, hide, delete }
 
 /// One channel in a list: tap plays, star toggles favorite, menu edits or
 /// deletes.
@@ -15,6 +15,12 @@ class ChannelTile extends StatelessWidget {
   final VoidCallback onToggleFavorite;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onAddToCategory;
+  final VoidCallback? onHide;
+
+  /// Shown in a custom category: removes the channel from it.
+  final VoidCallback? onRemoveFromCategory;
+  final String removeFromLabel;
 
   const ChannelTile({
     super.key,
@@ -24,6 +30,10 @@ class ChannelTile extends StatelessWidget {
     required this.onToggleFavorite,
     required this.onEdit,
     required this.onDelete,
+    this.onAddToCategory,
+    this.onHide,
+    this.onRemoveFromCategory,
+    this.removeFromLabel = '',
     this.showCategory = true,
   });
 
@@ -99,17 +109,45 @@ class ChannelTile extends StatelessWidget {
                 tooltip: 'More',
                 onSelected: (action) => switch (action) {
                   _ChannelAction.edit => onEdit(),
+                  _ChannelAction.addToCategory => onAddToCategory?.call(),
+                  _ChannelAction.removeFromCategory =>
+                    onRemoveFromCategory?.call(),
+                  _ChannelAction.hide => onHide?.call(),
                   _ChannelAction.delete => onDelete(),
                 },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
                     value: _ChannelAction.edit,
                     child: ListTile(
                       leading: Icon(Icons.edit_outlined),
                       title: Text('Edit sources'),
                     ),
                   ),
-                  PopupMenuItem(
+                  if (onAddToCategory != null)
+                    const PopupMenuItem(
+                      value: _ChannelAction.addToCategory,
+                      child: ListTile(
+                        leading: Icon(Icons.bookmark_add_outlined),
+                        title: Text('Add to category…'),
+                      ),
+                    ),
+                  if (onRemoveFromCategory != null)
+                    PopupMenuItem(
+                      value: _ChannelAction.removeFromCategory,
+                      child: ListTile(
+                        leading: const Icon(Icons.bookmark_remove_outlined),
+                        title: Text('Remove from $removeFromLabel'),
+                      ),
+                    ),
+                  if (onHide != null)
+                    const PopupMenuItem(
+                      value: _ChannelAction.hide,
+                      child: ListTile(
+                        leading: Icon(Icons.visibility_off_outlined),
+                        title: Text('Hide'),
+                      ),
+                    ),
+                  const PopupMenuItem(
                     value: _ChannelAction.delete,
                     child: ListTile(
                       leading: Icon(Icons.delete_outline),

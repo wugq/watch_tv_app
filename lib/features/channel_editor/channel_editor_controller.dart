@@ -10,6 +10,9 @@ import 'package:tv/data/repositories/channel_repository.dart';
 class ChannelEditorController extends GetxController {
   static const deleted = 'deleted';
 
+  static const invalidUrlMessage =
+      'Enter a full URL, for example https://example.com/live.m3u8';
+
   final ChannelRepository _repository;
 
   /// The channel being edited, or null when adding a channel.
@@ -27,8 +30,10 @@ class ChannelEditorController extends GetxController {
         : original?.category,
   );
   final newUrlText = TextEditingController();
+  final newUserAgentText = TextEditingController();
+  final newReferrerText = TextEditingController();
 
-  late final urls = <String>[...?original?.urls].obs;
+  late final sources = <StreamSource>[...?original?.sources].obs;
   late final favorite = (original?.favorite ?? false).obs;
   final categories = <String>[].obs;
   final isSaving = false.obs;
@@ -45,6 +50,8 @@ class ChannelEditorController extends GetxController {
     nameText.dispose();
     categoryText.dispose();
     newUrlText.dispose();
+    newUserAgentText.dispose();
+    newReferrerText.dispose();
     super.onClose();
   }
 
@@ -52,7 +59,7 @@ class ChannelEditorController extends GetxController {
     final channels = await _repository.getAll();
     categories.assignAll(
       channels
-          .map((c) => c.category)
+          .expand((c) => c.categories)
           .where((c) => c != Channel.defaultCategory)
           .toSet(),
     );
@@ -65,32 +72,68 @@ class ChannelEditorController extends GetxController {
     return null;
   }
 
-  /// Adds the URL in [newUrlText]. Returns false when it is not valid.
+  /// A source from user input, or null when the URL is not valid. Accepts
+  /// the `URL|User-Agent=...` form too; filled-in fields win over it.
+  static StreamSource? validSource(
+    String url, {
+    String? userAgent,
+    String? referrer,
+  }) {
+    final parsed = ChannelListParser.parseSource(url);
+    if (parsed == null) {
+      return null;
+    }
+    return StreamSource(
+      parsed.url,
+      userAgent: (userAgent?.trim().isNotEmpty ?? false)
+          ? userAgent
+          : parsed.userAgent,
+      referrer: (referrer?.trim().isNotEmpty ?? false)
+          ? referrer
+          : parsed.referrer,
+    );
+  }
+
+  /// Adds the URL in [newUrlText] with the optional headers. Returns false
+  /// when it is not valid.
   bool addUrl() {
     final url = newUrlText.text.trim();
     if (url.isEmpty) {
       return false;
     }
-    if (!ChannelListParser.isStreamUrl(url)) {
-      urlError.value =
-          'Enter a full URL, for example https://example.com/live.m3u8';
+    final source = validSource(
+      url,
+      userAgent: newUserAgentText.text,
+      referrer: newReferrerText.text,
+    );
+    if (source == null) {
+      urlError.value = invalidUrlMessage;
       return false;
     }
-    if (!urls.contains(url)) {
-      urls.add(url);
+    final index = sources.indexWhere((s) => s.url == source.url);
+    if (index >= 0) {
+      sources[index] = source;
+    } else {
+      sources.add(source);
     }
     newUrlText.clear();
+    newUserAgentText.clear();
+    newReferrerText.clear();
     urlError.value = null;
     return true;
   }
 
-  void removeUrl(int index) => urls.removeAt(index);
+  void replaceSource(int index, StreamSource source) {
+    sources[index] = source;
+  }
+
+  void removeSource(int index) => sources.removeAt(index);
 
   /// Moves a source one place up, so it is tried earlier.
   void moveUp(int index) {
     if (index <= 0) return;
-    final url = urls.removeAt(index);
-    urls.insert(index - 1, url);
+    final source = sources.removeAt(index);
+    sources.insert(index - 1, source);
   }
 
   Future<void> save() async {
@@ -99,15 +142,15 @@ class ChannelEditorController extends GetxController {
       return;
     }
     final nameValid = formKey.currentState?.validate() ?? false;
-    if (urls.isEmpty) {
+    if (sources.isEmpty) {
       urlError.value = 'Add at least one stream URL';
     }
-    if (!nameValid || urls.isEmpty || isSaving.value) {
+    if (!nameValid || sources.isEmpty || isSaving.value) {
       return;
     }
     final created = Channel.create(
       name: nameText.text.trim(),
-      urls: urls,
+      sources: sources,
       category: categoryText.text,
     );
     isSaving.value = true;
@@ -123,8 +166,9 @@ class ChannelEditorController extends GetxController {
           key: created.key,
           name: created.name,
           category: created.category,
-          urls: created.urls,
+          sources: created.sources,
           favorite: favorite.value,
+          hidden: old.hidden,
           lastWatched: old.lastWatched,
         );
         await _repository.replace(old, channel);

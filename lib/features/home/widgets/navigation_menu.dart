@@ -5,8 +5,7 @@ import 'package:get/get.dart';
 import 'package:tv/data/models/channel.dart';
 import 'package:tv/features/home/home_controller.dart';
 import 'package:tv/features/home/library_section.dart';
-import 'package:tv/features/home/widgets/channel_tile.dart';
-import 'package:tv/widgets/confirm_dialog.dart';
+import 'package:tv/features/home/widgets/channel_actions.dart';
 
 /// Two-level menu for wide screens, like a desktop start menu.
 ///
@@ -36,6 +35,8 @@ class _NavigationMenuState extends State<NavigationMenu> {
   static const _closeDelay = Duration(milliseconds: 350);
 
   final _search = TextEditingController();
+  final _sidebarScroll = ScrollController();
+  final _panelScroll = ScrollController();
 
   /// Section shown in the panel, or null when the panel is closed.
   LibrarySection? _open;
@@ -61,6 +62,8 @@ class _NavigationMenuState extends State<NavigationMenu> {
     _openTimer?.cancel();
     _closeTimer?.cancel();
     _search.dispose();
+    _sidebarScroll.dispose();
+    _panelScroll.dispose();
     super.dispose();
   }
 
@@ -181,42 +184,51 @@ class _NavigationMenuState extends State<NavigationMenu> {
             child: Obx(() {
               final sections = controller.sections;
               final selected = controller.section.value;
-              final fixed = sections.take(3).toList();
-              final categories = sections.skip(3).toList();
-              return ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                children: [
-                  for (final section in fixed)
-                    _SidebarItem(
-                      section: section,
-                      count: controller.channelsIn(section).length,
-                      selected: section == selected,
-                      open: section == _open,
-                      onHover: () => _hoverItem(section),
-                      onTap: () => _clickItem(section),
-                    ),
-                  if (categories.isNotEmpty) ...[
-                    const Divider(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-                      child: Text(
-                        'Categories',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    for (final section in categories)
-                      _SidebarItem(
-                        section: section,
-                        count: controller.channelsIn(section).length,
-                        selected: section == selected,
-                        open: section == _open,
-                        onHover: () => _hoverItem(section),
-                        onTap: () => _clickItem(section),
-                      ),
+              Widget item(LibrarySection section) => _SidebarItem(
+                section: section,
+                count: controller.channelsIn(section).length,
+                selected: section == selected,
+                open: section == _open,
+                onHover: () => _hoverItem(section),
+                onTap: () => _clickItem(section),
+              );
+              Widget header(String text) => Padding(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                child: Text(
+                  text,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              );
+              final fixed = sections.take(3);
+              final custom = sections.where(
+                (s) => s.kind == SectionKind.custom,
+              );
+              final categories = sections.where(
+                (s) => s.kind == SectionKind.category,
+              );
+              return Scrollbar(
+                controller: _sidebarScroll,
+                thumbVisibility: true,
+                interactive: true,
+                child: ListView(
+                  controller: _sidebarScroll,
+                  padding: const EdgeInsets.fromLTRB(8, 0, 16, 8),
+                  children: [
+                    ...fixed.map(item),
+                    if (custom.isNotEmpty) ...[
+                      const Divider(height: 16),
+                      header('My categories'),
+                      ...custom.map(item),
+                    ],
+                    if (categories.isNotEmpty) ...[
+                      const Divider(height: 16),
+                      header('Categories'),
+                      ...categories.map(item),
+                    ],
                   ],
-                ],
+                ),
               );
             }),
           ),
@@ -297,42 +309,34 @@ class _NavigationMenuState extends State<NavigationMenu> {
             Expanded(
               child: channels.isEmpty
                   ? _PanelEmpty(section: section, searching: searching)
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(8),
-                      itemCount: channels.length,
-                      itemBuilder: (context, index) {
-                        final channel = channels[index];
-                        return ChannelTile(
-                          key: ValueKey(channel.key),
-                          channel: channel,
-                          isPlaying: channel.key == playingKey,
-                          showCategory:
-                              searching || section.kind != SectionKind.category,
-                          onTap: () => _play(channel),
-                          onToggleFavorite: () =>
-                              controller.toggleFavorite(channel),
-                          onEdit: () => controller.editChannel(channel),
-                          onDelete: () => _delete(context, channel),
-                        );
-                      },
+                  : Scrollbar(
+                      controller: _panelScroll,
+                      thumbVisibility: true,
+                      interactive: true,
+                      child: ListView.builder(
+                        key: ValueKey(searching ? 'search' : section),
+                        controller: _panelScroll,
+                        padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+                        itemCount: channels.length,
+                        itemBuilder: (context, index) {
+                          final channel = channels[index];
+                          return homeChannelTile(
+                            context,
+                            controller,
+                            channel,
+                            section: section,
+                            searching: searching,
+                            isPlaying: channel.key == playingKey,
+                            onTap: () => _play(channel),
+                          );
+                        },
+                      ),
                     ),
             ),
           ],
         );
       }),
     );
-  }
-
-  Future<void> _delete(BuildContext context, Channel channel) async {
-    final confirmed = await showConfirmDialog(
-      context,
-      title: 'Delete channel?',
-      message: '"${channel.name}" and all its sources will be removed.',
-      confirmLabel: 'Delete',
-    );
-    if (confirmed) {
-      await controller.deleteChannel(channel);
-    }
   }
 }
 

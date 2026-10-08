@@ -271,6 +271,86 @@ void main() {
     });
   });
 
+  group('library and visibility', () {
+    testWidgets('hiding a category in the library hides it on home', (
+      tester,
+    ) async {
+      await pumpApp(tester, [alpha, beta]);
+
+      await tester.tap(find.byTooltip('Manage library'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Categories'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 of 2 shown'), findsOneWidget);
+
+      await tester.tap(find.byType(Switch).last);
+      await tester.pumpAndSettle();
+      expect(find.text('1 of 2 shown'), findsOneWidget);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      // The selected section is still All channels.
+      expect(inList('Alpha'), findsOneWidget);
+      expect(inList('Beta'), findsNothing);
+    });
+
+    testWidgets('hide and add to category from the channel menu', (
+      tester,
+    ) async {
+      await pumpApp(tester, [alpha, beta]);
+
+      await tester.tap(find.byTooltip('More').at(1));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add to category…'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'New category'),
+        'Mine',
+      );
+      await tester.tap(find.byTooltip('Create'));
+      await tester.pumpAndSettle();
+      await settleSnackbars(tester);
+
+      await tester.tap(find.byTooltip('All categories'));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, 'Mine'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ListTile, 'Mine'));
+      await tester.pumpAndSettle();
+      expect(inList('Beta'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('More').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hide'));
+      await tester.pumpAndSettle();
+
+      expect(inList('Beta'), findsNothing);
+      expect(find.text('Undo'), findsOneWidget);
+      await settleSnackbars(tester);
+    });
+
+    testWidgets('a User-Agent can be set for a source', (tester) async {
+      await pumpApp(tester, [alpha]);
+
+      await tester.longPress(inList('Alpha'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Edit source'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'User-Agent (optional)'),
+        'MyAgent/1.0',
+      );
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(find.text('User-Agent: MyAgent/1.0'), findsOneWidget);
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final saved = await Get.find<ChannelRepository>().getAll();
+      expect(saved.single.sources.single.userAgent, 'MyAgent/1.0');
+    });
+  });
+
   group('desktop', () {
     testWidgets('pointing at a category opens its channels', (tester) async {
       final player = await pumpApp(tester, [alpha, beta], size: desktop);

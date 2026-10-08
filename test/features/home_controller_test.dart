@@ -42,6 +42,58 @@ void main() {
 
   tearDown(Get.reset);
 
+  group('visibility', () {
+    test('hidden channels are not shown anywhere', () async {
+      await repository.setHidden([movie.key], true);
+      await controller.reload();
+
+      expect(controller.channelsIn(LibrarySection.all), isNot(contains(movie)));
+      expect(controller.channelsIn(LibrarySection.favorites), isEmpty);
+      expect(controller.search('movies'), isEmpty);
+      expect(controller.categories, isNot(contains('Film')));
+    });
+
+    test('a hidden category drops out of browsing but not favorites', () async {
+      await repository.setCategoryHidden(['Film', 'News'], true);
+      await controller.reload();
+
+      expect(controller.categories, ['Sport']);
+      expect(controller.channelsIn(LibrarySection.all).map((c) => c.name), [
+        'Sport 1',
+      ]);
+      expect(
+        controller.channelsIn(LibrarySection.favorites).single.name,
+        'Movies',
+      );
+    });
+
+    test('hideChannel hides at once', () async {
+      await controller.hideChannel(sport);
+
+      expect(controller.channelsIn(LibrarySection.all).map((c) => c.name), [
+        'CCTV News',
+        'Movies',
+      ]);
+      expect((await repository.getAll())[1].hidden, isTrue);
+    });
+  });
+
+  test('custom categories are sections with the chosen channels', () async {
+    await controller.addToCustomCategory(sport, newName: 'Mine');
+    final id = controller.customCategories.single.id;
+    await controller.addToCustomCategory(news, id: id);
+
+    final section = LibrarySection.custom(id, 'Mine');
+    expect(controller.sections.indexOf(section), 3, reason: 'after fixed');
+    expect(controller.channelsIn(section).map((c) => c.name), [
+      'Sport 1',
+      'CCTV News',
+    ]);
+
+    await controller.removeFromCustomCategory(sport, id);
+    expect(controller.channelsIn(section).map((c) => c.name), ['CCTV News']);
+  });
+
   test('sections: fixed ones, then categories in order of first use', () {
     expect(controller.sections, [
       LibrarySection.favorites,

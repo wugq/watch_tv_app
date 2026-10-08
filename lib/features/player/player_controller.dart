@@ -19,7 +19,15 @@ enum PlaybackStatus {
   const PlaybackStatus(this.label);
 }
 
-typedef VideoControllerFactory = VideoPlayerController Function(Uri url);
+typedef VideoControllerFactory = VideoPlayerController Function(
+  Uri url,
+  Map<String, String> headers,
+);
+
+VideoPlayerController _networkController(
+  Uri url,
+  Map<String, String> headers,
+) => VideoPlayerController.networkUrl(url, httpHeaders: headers);
 
 /// Owns the video player. Only one channel plays at a time.
 class PlayerController extends GetxController with WidgetsBindingObserver {
@@ -44,15 +52,14 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     this.errorsAreFatal = true,
     this.stallTimeout = const Duration(seconds: 20),
     this.pauseInBackground = true,
-  }) : _createVideoController =
-           createVideoController ?? VideoPlayerController.networkUrl;
+  }) : _createVideoController = createVideoController ?? _networkController;
 
   /// How long a source may take to start before the next one is tried.
   static const openTimeout = Duration(seconds: 20);
 
   final channel = Rxn<Channel>();
 
-  /// Index of the playing source in `channel.urls`.
+  /// Index of the playing source in `channel.sources`.
   final sourceIndex = 0.obs;
   final status = PlaybackStatus.idle.obs;
   final errorMessage = RxnString();
@@ -136,13 +143,14 @@ class PlayerController extends GetxController with WidgetsBindingObserver {
     errorMessage.value = null;
     status.value = PlaybackStatus.loading;
 
-    final uri = Uri.tryParse(newChannel.urls[index]);
+    final source = newChannel.sources[index];
+    final uri = Uri.tryParse(source.url);
     if (uri == null) {
       _onSourceFailed('Invalid URL');
       return;
     }
 
-    final controller = _createVideoController(uri);
+    final controller = _createVideoController(uri, source.headers);
     video.value = controller;
     isVideoReady.value = false;
     try {

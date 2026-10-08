@@ -181,8 +181,107 @@ void main() {
     );
   });
 
+  test('stores HTTP headers of sources', () async {
+    await repository.import([
+      Channel.create(
+        name: 'A',
+        sources: [
+          StreamSource('http://a/1', userAgent: 'UA', referrer: 'https://r/'),
+          StreamSource('http://a/2'),
+        ],
+      ),
+    ]);
+
+    final sources = (await repository.getAll()).single.sources;
+    expect(sources.first.headers, {
+      'User-Agent': 'UA',
+      'Referer': 'https://r/',
+    });
+    expect(sources.last.hasHeaders, isFalse);
+  });
+
+  test('hidden channels and categories are stored', () async {
+    final a = channel('A', ['http://a/1'], 'News');
+    await repository.import([
+      a,
+      channel('B', ['http://b/1']),
+    ]);
+
+    await repository.setHidden([a.key], true);
+    await repository.setCategoryHidden(['News', 'Shop'], true);
+    await repository.setCategoryHidden(['Shop'], false);
+
+    final all = await repository.getAll();
+    expect(all.first.hidden, isTrue);
+    expect(all.last.hidden, isFalse);
+    expect(await repository.getHiddenCategories(), {'News'});
+  });
+
+  group('custom categories', () {
+    test('create, add in order, remove, rename, delete', () async {
+      final a = channel('A', ['http://a/1']);
+      final b = channel('B', ['http://b/1']);
+      await repository.import([a, b]);
+
+      final kids = await repository.createCustomCategory('Kids');
+      final news = await repository.createCustomCategory('News');
+      await repository.addToCustomCategory(kids, [b.key, a.key]);
+      await repository.addToCustomCategory(kids, [b.key]);
+      await repository.renameCustomCategory(news, 'My news');
+
+      var custom = await repository.getCustomCategories();
+      expect(custom.map((c) => c.name), ['Kids', 'My news']);
+      expect(custom.first.channelKeys, [b.key, a.key]);
+
+      await repository.removeFromCustomCategory(kids, [b.key]);
+      await repository.deleteCustomCategory(news);
+      custom = await repository.getCustomCategories();
+      expect(custom.single.channelKeys, [a.key]);
+    });
+
+    test('rename keeps membership, delete removes it', () async {
+      final a = channel('A', ['http://a/1']);
+      await repository.import([a]);
+      final id = await repository.createCustomCategory('Mine');
+      await repository.addToCustomCategory(id, [a.key]);
+
+      final renamed = channel('A2', ['http://a/1']);
+      await repository.replace(a, renamed);
+      expect((await repository.getCustomCategories()).single.channelKeys, [
+        renamed.key,
+      ]);
+
+      await repository.delete(renamed.key);
+      expect(
+        (await repository.getCustomCategories()).single.channelKeys,
+        isEmpty,
+      );
+    });
+
+    test('deleting a playlist cleans up membership', () async {
+      await repository.addPlaylist(
+        name: 'p',
+        channels: [
+          channel('A', ['http://a/1']),
+        ],
+      );
+      final a = channel('A', ['http://a/1']);
+      final id = await repository.createCustomCategory('Mine');
+      await repository.addToCustomCategory(id, [a.key]);
+
+      await repository.deletePlaylist(
+        (await repository.getPlaylists()).single.id,
+      );
+
+      expect(
+        (await repository.getCustomCategories()).single.channelKeys,
+        isEmpty,
+      );
+    });
+  });
+
   group('migration', () {
-    test('v1 to v3 keeps channels, order and URLs', () async {
+    test('v1 to v4 keeps channels, order and URLs', () async {
       final v1 = await openMemory();
       await v1.execute(v1Schema);
       for (final name in ['Z', 'A', 'M']) {
@@ -194,7 +293,7 @@ void main() {
         });
       }
 
-      await v1.transaction((txn) => ChannelDatabase.upgrade(txn, 1, 3));
+      await v1.transaction((txn) => ChannelDatabase.upgrade(txn, 1, 4));
 
       final all = await SqfliteChannelRepository(v1).getAll();
       expect(all.map((c) => c.name), ['Z', 'A', 'M']);
@@ -204,7 +303,35 @@ void main() {
       await v1.close();
     });
 
-    test('v2 to v3 keeps sources as added by hand', () async {
+    test('v3 to v4 keeps channels and adds the new columns', () async {
+      final v3 = await openMemory();
+      await v3.execute(v1Schema);
+      await v3.transaction((txn) => ChannelDatabase.upgrade(txn, 1, 3));
+      await v3.insert('CHANNELS', {
+        'key': 'k',
+        'name': 'A',
+        'category': 'News',
+        'favorite': 1,
+      });
+      await v3.insert('SOURCES', {
+        'channel_key': 'k',
+        'position': 0,
+        'url': 'http://a/1',
+      });
+
+      await v3.transaction((txn) => ChannelDatabase.upgrade(txn, 3, 4));
+
+      final repo = SqfliteChannelRepository(v3);
+      final channel = (await repo.getAll()).single;
+      expect(channel.favorite, isTrue);
+      expect(channel.hidden, isFalse);
+      expect(channel.sources.single.hasHeaders, isFalse);
+      expect(await repo.getCustomCategories(), isEmpty);
+      expect(await repo.getHiddenCategories(), isEmpty);
+      await v3.close();
+    });
+
+    test('v2 to v4 keeps sources as added by hand', () async {
       final v2 = await openMemory();
       await v2.execute(v1Schema);
       await v2.transaction((txn) => ChannelDatabase.migrateV1ToV2(txn));
@@ -219,7 +346,7 @@ void main() {
         'url': 'http://a/1',
       });
 
-      await v2.transaction((txn) => ChannelDatabase.upgrade(txn, 2, 3));
+      await v2.transaction((txn) => ChannelDatabase.upgrade(txn, 2, 4));
 
       final repo = SqfliteChannelRepository(v2);
       expect((await repo.getAll()).single.urls, ['http://a/1']);

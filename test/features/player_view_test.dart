@@ -10,7 +10,8 @@ import 'player_controller_test.dart' show FakeVideoController;
 void main() {
   testWidgets('shows the video once the stream is initialized', (tester) async {
     final player = PlayerController(
-      createVideoController: (uri) => FakeVideoController(uri, fails: false),
+      createVideoController: (uri, headers) =>
+          FakeVideoController(uri, fails: false),
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -40,7 +41,7 @@ void main() {
     final controllers = <FakeVideoController>[];
     final player = PlayerController(
       errorsAreFatal: false,
-      createVideoController: (uri) {
+      createVideoController: (uri, headers) {
         final controller = FakeVideoController(uri, fails: false);
         controllers.add(controller);
         return controller;

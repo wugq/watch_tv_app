@@ -1,4 +1,5 @@
 import 'package:tv/data/models/channel.dart';
+import 'package:tv/data/models/custom_category.dart';
 import 'package:tv/data/models/playlist.dart';
 import 'package:tv/data/repositories/channel_repository.dart';
 import 'package:tv/features/player/player_controller.dart';
@@ -6,6 +7,8 @@ import 'package:tv/features/player/player_controller.dart';
 class InMemoryChannelRepository implements ChannelRepository {
   final List<Channel> _channels;
   final _playlists = <Playlist>[];
+  final _hiddenCategories = <String>{};
+  final _custom = <CustomCategory>[];
 
   InMemoryChannelRepository([List<Channel>? channels])
     : _channels = [...?channels];
@@ -58,6 +61,76 @@ class InMemoryChannelRepository implements ChannelRepository {
   @override
   Future<void> markWatched(String key, DateTime time) async {
     _update(key, (c) => c.copyWith(lastWatched: time));
+  }
+
+  @override
+  Future<void> setHidden(Iterable<String> keys, bool hidden) async {
+    for (final key in keys) {
+      _update(key, (c) => c.copyWith(hidden: hidden));
+    }
+  }
+
+  @override
+  Future<Set<String>> getHiddenCategories() async => {..._hiddenCategories};
+
+  @override
+  Future<void> setCategoryHidden(Iterable<String> names, bool hidden) async {
+    hidden
+        ? _hiddenCategories.addAll(names)
+        : _hiddenCategories.removeAll(names);
+  }
+
+  @override
+  Future<List<CustomCategory>> getCustomCategories() async => List.of(_custom);
+
+  @override
+  Future<int> createCustomCategory(String name) async {
+    final id = _custom.length + 1;
+    _custom.add(CustomCategory(id: id, name: name));
+    return id;
+  }
+
+  @override
+  Future<void> renameCustomCategory(int id, String name) async {
+    _replaceCustom(
+      id,
+      (c) => CustomCategory(id: id, name: name, channelKeys: c.channelKeys),
+    );
+  }
+
+  @override
+  Future<void> deleteCustomCategory(int id) async {
+    _custom.removeWhere((c) => c.id == id);
+  }
+
+  @override
+  Future<void> addToCustomCategory(int id, Iterable<String> keys) async {
+    _replaceCustom(
+      id,
+      (c) => CustomCategory(
+        id: id,
+        name: c.name,
+        channelKeys: {...c.channelKeys, ...keys}.toList(),
+      ),
+    );
+  }
+
+  @override
+  Future<void> removeFromCustomCategory(int id, Iterable<String> keys) async {
+    final remove = keys.toSet();
+    _replaceCustom(
+      id,
+      (c) => CustomCategory(
+        id: id,
+        name: c.name,
+        channelKeys: c.channelKeys.where((k) => !remove.contains(k)).toList(),
+      ),
+    );
+  }
+
+  void _replaceCustom(int id, CustomCategory Function(CustomCategory) change) {
+    final index = _custom.indexWhere((c) => c.id == id);
+    if (index >= 0) _custom[index] = change(_custom[index]);
   }
 
   void _update(String key, Channel Function(Channel) change) {

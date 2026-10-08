@@ -3,21 +3,31 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:tv/core/platform.dart';
 
-/// Schema (version 3):
+/// Schema (version 4):
 ///
-/// * `CHANNELS(key, name, category, favorite, last_watched)`: one row per
-///   channel, in display order (rowid).
-/// * `SOURCES(channel_key, position, url, playlist_id)`: stream URLs of a
-///   channel. `playlist_id` is null for sources added by hand.
+/// * `CHANNELS(key, name, category, favorite, last_watched, hidden)`: one
+///   row per channel, in display order (rowid).
+/// * `SOURCES(channel_key, position, url, playlist_id, user_agent,
+///   referrer)`: stream URLs of a channel. `playlist_id` is null for
+///   sources added by hand.
 /// * `PLAYLISTS(id, name, url, created_at, updated_at)`: imported lists.
+/// * `CATEGORY_SETTINGS(name, hidden)`: playlist categories the user hid.
+/// * `CUSTOM_CATEGORIES(id, name, position)` and
+///   `CUSTOM_CATEGORY_CHANNELS(category_id, channel_key, position)`:
+///   categories made by the user.
 ///
 /// Version 1 had a single `url` column in `CHANNELS`. Version 2 added
 /// `SOURCES`. Version 3 added favorites, watch history and playlists.
+/// Version 4 added hidden channels and categories, custom categories and
+/// HTTP headers per source.
 class ChannelDatabase {
   static const channels = 'CHANNELS';
   static const sources = 'SOURCES';
   static const playlists = 'PLAYLISTS';
-  static const version = 3;
+  static const categorySettings = 'CATEGORY_SETTINGS';
+  static const customCategories = 'CUSTOM_CATEGORIES';
+  static const customCategoryChannels = 'CUSTOM_CATEGORY_CHANNELS';
+  static const version = 4;
 
   static Future<Database> open() async {
     return openDatabase(
@@ -37,6 +47,7 @@ class ChannelDatabase {
     _createV2Tables(batch);
     await batch.commit(noResult: true);
     await migrateV2ToV3(db);
+    await migrateV3ToV4(db);
   }
 
   static Future<void> upgrade(
@@ -44,11 +55,14 @@ class ChannelDatabase {
     int oldVersion,
     int newVersion,
   ) async {
-    if (oldVersion < 2) {
+    if (oldVersion < 2 && newVersion >= 2) {
       await migrateV1ToV2(db);
     }
-    if (oldVersion < 3) {
+    if (oldVersion < 3 && newVersion >= 3) {
       await migrateV2ToV3(db);
+    }
+    if (oldVersion < 4 && newVersion >= 4) {
+      await migrateV3ToV4(db);
     }
   }
 
@@ -113,6 +127,35 @@ class ChannelDatabase {
     batch.execute('ALTER TABLE $channels ADD COLUMN last_watched INTEGER');
     batch.execute('ALTER TABLE $sources ADD COLUMN playlist_id INTEGER');
     batch.execute('CREATE INDEX sources_playlist ON $sources(playlist_id)');
+    await batch.commit(noResult: true);
+  }
+
+  /// Adds hidden channels and categories, custom categories and HTTP
+  /// headers per source.
+  static Future<void> migrateV3ToV4(DatabaseExecutor db) async {
+    final batch = db.batch();
+    batch.execute(
+      'ALTER TABLE $channels ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0',
+    );
+    batch.execute('ALTER TABLE $sources ADD COLUMN user_agent TEXT');
+    batch.execute('ALTER TABLE $sources ADD COLUMN referrer TEXT');
+    batch.execute(
+      'CREATE TABLE $categorySettings('
+      'name TEXT PRIMARY KEY, hidden INTEGER NOT NULL DEFAULT 0)',
+    );
+    batch.execute(
+      'CREATE TABLE $customCategories('
+      'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+      'name TEXT NOT NULL, '
+      'position INTEGER NOT NULL)',
+    );
+    batch.execute(
+      'CREATE TABLE $customCategoryChannels('
+      'category_id INTEGER NOT NULL, '
+      'channel_key TEXT NOT NULL, '
+      'position INTEGER NOT NULL, '
+      'PRIMARY KEY (category_id, channel_key))',
+    );
     await batch.commit(noResult: true);
   }
 }

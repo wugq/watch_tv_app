@@ -63,7 +63,7 @@ void main() {
     return PlayerController(
       errorsAreFatal: errorsAreFatal,
       stallTimeout: const Duration(milliseconds: 50),
-      createVideoController: (uri) {
+      createVideoController: (uri, headers) {
         opened.add(uri.toString());
         final controller = FakeVideoController(uri, fails: uri.host == 'bad');
         controllers.add(controller);
@@ -161,7 +161,7 @@ void main() {
     test('keeps playing on desktop (focus loss, full screen)', () async {
       player = PlayerController(
         pauseInBackground: false,
-        createVideoController: (uri) {
+        createVideoController: (uri, headers) {
           final controller = FakeVideoController(uri, fails: false);
           controllers.add(controller);
           return controller;
@@ -175,5 +175,30 @@ void main() {
 
       expect(controllers.last.value.isPlaying, isTrue);
     });
+  });
+
+  test('passes the source HTTP headers to the player', () async {
+    final received = <Map<String, String>>[];
+    player = PlayerController(
+      createVideoController: (uri, headers) {
+        received.add(headers);
+        return FakeVideoController(uri, fails: false);
+      },
+    );
+
+    await player.play(
+      Channel.create(
+        name: 'H',
+        sources: [
+          StreamSource(
+            'http://good/h',
+            userAgent: 'UA',
+            referrer: 'https://r/',
+          ),
+        ],
+      ),
+    );
+
+    expect(received.single, {'User-Agent': 'UA', 'Referer': 'https://r/'});
   });
 }

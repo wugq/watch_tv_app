@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tv/data/models/channel.dart';
 import 'package:tv/features/home/home_controller.dart';
 import 'package:tv/features/home/library_section.dart';
-import 'package:tv/features/home/widgets/channel_tile.dart';
-import 'package:tv/widgets/confirm_dialog.dart';
+import 'package:tv/features/home/widgets/channel_actions.dart';
 
 /// Channel browser for narrow screens: a row of section chips (level 1)
 /// above the channel list (level 2). The grid button opens all categories
@@ -39,17 +37,14 @@ class MobileBrowser extends StatelessWidget {
                     itemCount: channels.length,
                     itemBuilder: (context, index) {
                       final channel = channels[index];
-                      return ChannelTile(
-                        key: ValueKey(channel.key),
-                        channel: channel,
+                      return homeChannelTile(
+                        context,
+                        controller,
+                        channel,
+                        section: section,
+                        searching: searching,
                         isPlaying: channel.key == playingKey,
-                        showCategory:
-                            searching || section.kind != SectionKind.category,
                         onTap: () => controller.play(channel),
-                        onToggleFavorite: () =>
-                            controller.toggleFavorite(channel),
-                        onEdit: () => controller.editChannel(channel),
-                        onDelete: () => _delete(context, channel),
                       );
                     },
                   ),
@@ -57,18 +52,6 @@ class MobileBrowser extends StatelessWidget {
         ],
       );
     });
-  }
-
-  Future<void> _delete(BuildContext context, Channel channel) async {
-    final confirmed = await showConfirmDialog(
-      context,
-      title: 'Delete channel?',
-      message: '"${channel.name}" and all its sources will be removed.',
-      confirmLabel: 'Delete',
-    );
-    if (confirmed) {
-      await controller.deleteChannel(channel);
-    }
   }
 }
 
@@ -102,7 +85,7 @@ class _SectionChips extends StatelessWidget {
               itemBuilder: (context, index) {
                 final section = sections[index];
                 return ChoiceChip(
-                  avatar: index < 3
+                  avatar: section.kind != SectionKind.category
                       ? Icon(
                           section.icon,
                           size: 18,

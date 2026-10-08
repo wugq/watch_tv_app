@@ -159,4 +159,56 @@ void main() {
     expect(channels, hasLength(6000));
     expect(channels.last.name, 'Channel 5999');
   });
+
+  group('HTTP headers', () {
+    test('M3U attributes and EXTVLCOPT lines', () {
+      final channels = ChannelListParser.parse(
+        '#EXTM3U\n'
+        '#EXTINF:-1 http-user-agent="Agent/1.0 (X11, Linux)" '
+        'http-referrer="https://site.example/",A\n'
+        'https://a.example/live.m3u8\n'
+        '#EXTINF:-1,B\n'
+        '#EXTVLCOPT:http-user-agent=VLC/3.0\n'
+        '#EXTVLCOPT:http-referrer=https://b.example/\n'
+        'https://b.example/live.m3u8\n'
+        '#EXTINF:-1,C\n'
+        'https://c.example/live.m3u8\n',
+      );
+
+      final a = channels[0].sources.single;
+      expect(a.userAgent, 'Agent/1.0 (X11, Linux)');
+      expect(a.referrer, 'https://site.example/');
+      expect(a.headers, {
+        'User-Agent': 'Agent/1.0 (X11, Linux)',
+        'Referer': 'https://site.example/',
+      });
+      final b = channels[1].sources.single;
+      expect(b.userAgent, 'VLC/3.0');
+      expect(b.referrer, 'https://b.example/');
+      expect(
+        channels[2].sources.single.hasHeaders,
+        isFalse,
+        reason: 'headers do not carry over to the next entry',
+      );
+    });
+
+    test('URL|User-Agent=...&Referer=... form', () {
+      final channels = ChannelListParser.parse(
+        'A,https://a.example/live.m3u8|User-Agent=My%20Agent&Referer=https://r.example/\n',
+      );
+
+      final source = channels.single.sources.single;
+      expect(source.url, 'https://a.example/live.m3u8');
+      expect(source.userAgent, 'My Agent');
+      expect(source.referrer, 'https://r.example/');
+    });
+
+    test('bad percent encoding keeps the raw value', () {
+      final source = ChannelListParser.parseSource(
+        'https://a.example/x|User-Agent=100%',
+      );
+
+      expect(source?.userAgent, '100%');
+    });
+  });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tv/core/platform.dart';
 
 abstract final class AppTheme {
   static const _seed = Color(0xFF3F51B5);
@@ -29,6 +30,7 @@ abstract final class AppTheme {
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+      scrollbarTheme: isDesktop ? _desktopScrollbar : null,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerHighest,
@@ -43,4 +45,22 @@ abstract final class AppTheme {
       ),
     );
   }
+
+  /// Long lists are common (thousands of channels), so on desktop the
+  /// scrollbar is always visible, thick and draggable.
+  static final _desktopScrollbar = ScrollbarThemeData(
+    thumbVisibility: const WidgetStatePropertyAll(true),
+    trackVisibility: WidgetStateProperty.resolveWith(
+      (states) => states.contains(WidgetState.hovered),
+    ),
+    thickness: WidgetStateProperty.resolveWith(
+      (states) =>
+          states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.dragged)
+          ? 14
+          : 10,
+    ),
+    radius: const Radius.circular(8),
+    interactive: true,
+  );
 }

@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:tv/data/models/channel.dart';
+import 'package:tv/data/models/custom_category.dart';
 import 'package:tv/data/models/playlist.dart';
 import 'package:tv/data/sources/channel_database.dart';
 
@@ -13,7 +14,7 @@ class ImportResult {
 }
 
 abstract class ChannelRepository {
-  /// All channels in display order.
+  /// All channels in display order, hidden ones included.
   Future<List<Channel>> getAll();
 
   /// Adds [channels] as sources added by hand. A channel whose name already
@@ -21,7 +22,7 @@ abstract class ChannelRepository {
   Future<ImportResult> import(Iterable<Channel> channels);
 
   /// Replaces [oldChannel] with [newChannel], including all sources. The
-  /// channel keeps its position when the name does not change.
+  /// channel keeps its position and custom categories when renamed.
   Future<void> replace(Channel oldChannel, Channel newChannel);
 
   Future<void> delete(String key);
@@ -30,7 +31,30 @@ abstract class ChannelRepository {
 
   Future<void> setFavorite(String key, bool favorite);
 
+  /// Hides channels from browsing, or shows them again.
+  Future<void> setHidden(Iterable<String> keys, bool hidden);
+
   Future<void> markWatched(String key, DateTime time);
+
+  /// Playlist categories the user hid.
+  Future<Set<String>> getHiddenCategories();
+
+  Future<void> setCategoryHidden(Iterable<String> names, bool hidden);
+
+  Future<List<CustomCategory>> getCustomCategories();
+
+  /// Returns the id of the new category.
+  Future<int> createCustomCategory(String name);
+
+  Future<void> renameCustomCategory(int id, String name);
+
+  Future<void> deleteCustomCategory(int id);
+
+  /// Appends channels to a custom category. Channels already in it stay
+  /// where they are.
+  Future<void> addToCustomCategory(int id, Iterable<String> keys);
+
+  Future<void> removeFromCustomCategory(int id, Iterable<String> keys);
 
   /// Playlists with their channel and source counts.
   Future<List<Playlist>> getPlaylists();
@@ -42,8 +66,9 @@ abstract class ChannelRepository {
     required Iterable<Channel> channels,
   });
 
-  /// Replaces the sources of playlist [id] with [channels]. Favorites and
-  /// history of channels that are still in the list are kept.
+  /// Replaces the sources of playlist [id] with [channels]. Favorites,
+  /// visibility and history of channels that are still in the list are
+  /// kept.
   Future<ImportResult> refreshPlaylist(int id, Iterable<Channel> channels);
 
   Future<void> renamePlaylist(int id, String name);
@@ -61,6 +86,9 @@ class SqfliteChannelRepository implements ChannelRepository {
   static const _channels = ChannelDatabase.channels;
   static const _sources = ChannelDatabase.sources;
   static const _playlists = ChannelDatabase.playlists;
+  static const _categorySettings = ChannelDatabase.categorySettings;
+  static const _custom = ChannelDatabase.customCategories;
+  static const _customChannels = ChannelDatabase.customCategoryChannels;
 
   @override
   Future<List<Channel>> getAll() async {
@@ -69,21 +97,29 @@ class SqfliteChannelRepository implements ChannelRepository {
       _sources,
       orderBy: 'channel_key, position, rowid',
     );
-    final urlsByKey = <String, List<String>>{};
+    final sourcesByKey = <String, List<StreamSource>>{};
     for (final row in sourceRows) {
-      urlsByKey
+      sourcesByKey
           .putIfAbsent(row['channel_key'] as String, () => [])
-          .add(row['url'] as String);
+          .add(
+            StreamSource(
+              row['url'] as String,
+              userAgent: row['user_agent'] as String?,
+              referrer: row['referrer'] as String?,
+            ),
+          );
     }
     return [
       for (final row in channelRows)
-        if (urlsByKey[row['key']] case final urls? when urls.isNotEmpty)
+        if (sourcesByKey[row['key']] case final sources?
+            when sources.isNotEmpty)
           Channel(
             key: row['key'] as String,
             name: row['name'] as String,
             category: row['category'] as String,
-            urls: urls,
+            sources: sources,
             favorite: row['favorite'] == 1,
+            hidden: row['hidden'] == 1,
             lastWatched: switch (row['last_watched']) {
               final int ms => DateTime.fromMillisecondsSinceEpoch(ms),
               _ => null,
@@ -100,12 +136,20 @@ class SqfliteChannelRepository implements ChannelRepository {
   @override
   Future<void> replace(Channel oldChannel, Channel newChannel) {
     return _db.transaction((txn) async {
-      if (oldChannel.key != newChannel.key) {
+      final renamed = oldChannel.key != newChannel.key;
+      if (renamed) {
+        // Keep the custom categories of the old name.
+        await txn.execute(
+          'UPDATE OR IGNORE $_customChannels SET channel_key = ? '
+          'WHERE channel_key = ?',
+          [newChannel.key, oldChannel.key],
+        );
         await _delete(txn, [oldChannel.key]);
       }
       final row = {
         ..._channelRow(newChannel),
         'favorite': newChannel.favorite ? 1 : 0,
+        'hidden': newChannel.hidden ? 1 : 0,
         'last_watched': newChannel.lastWatched?.millisecondsSinceEpoch,
       };
       final updatedRows = await txn.update(
@@ -122,7 +166,9 @@ class SqfliteChannelRepository implements ChannelRepository {
         where: 'channel_key = ?',
         whereArgs: [newChannel.key],
       );
-      await _appendSources(txn, newChannel, null);
+      final batch = txn.batch();
+      _insertSources(batch, newChannel, 0, null);
+      await batch.commit(noResult: true);
     });
   }
 
@@ -145,6 +191,20 @@ class SqfliteChannelRepository implements ChannelRepository {
   }
 
   @override
+  Future<void> setHidden(Iterable<String> keys, bool hidden) {
+    return _db.transaction((txn) async {
+      await _forChunks(keys.toList(), (chunk, marks) async {
+        await txn.update(
+          _channels,
+          {'hidden': hidden ? 1 : 0},
+          where: 'key IN ($marks)',
+          whereArgs: chunk,
+        );
+      });
+    });
+  }
+
+  @override
   Future<void> markWatched(String key, DateTime time) async {
     await _db.update(
       _channels,
@@ -152,6 +212,109 @@ class SqfliteChannelRepository implements ChannelRepository {
       where: 'key = ?',
       whereArgs: [key],
     );
+  }
+
+  @override
+  Future<Set<String>> getHiddenCategories() async {
+    final rows = await _db.query(_categorySettings, where: 'hidden = 1');
+    return {for (final row in rows) row['name'] as String};
+  }
+
+  @override
+  Future<void> setCategoryHidden(Iterable<String> names, bool hidden) async {
+    final batch = _db.batch();
+    for (final name in names) {
+      batch.insert(_categorySettings, {
+        'name': name,
+        'hidden': hidden ? 1 : 0,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  @override
+  Future<List<CustomCategory>> getCustomCategories() async {
+    final categories = await _db.query(_custom, orderBy: 'position, id');
+    final members = await _db.query(
+      _customChannels,
+      orderBy: 'category_id, position',
+    );
+    final keysById = <int, List<String>>{};
+    for (final row in members) {
+      keysById
+          .putIfAbsent(row['category_id'] as int, () => [])
+          .add(row['channel_key'] as String);
+    }
+    return [
+      for (final row in categories)
+        CustomCategory(
+          id: row['id'] as int,
+          name: row['name'] as String,
+          channelKeys: keysById[row['id']] ?? const [],
+        ),
+    ];
+  }
+
+  @override
+  Future<int> createCustomCategory(String name) async {
+    final result = await _db.rawQuery(
+      'SELECT COALESCE(MAX(position), -1) + 1 AS next FROM $_custom',
+    );
+    return _db.insert(_custom, {
+      'name': name,
+      'position': result.first['next'] as int,
+    });
+  }
+
+  @override
+  Future<void> renameCustomCategory(int id, String name) async {
+    await _db.update(_custom, {'name': name}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  @override
+  Future<void> deleteCustomCategory(int id) {
+    return _db.transaction((txn) async {
+      await txn.delete(
+        _customChannels,
+        where: 'category_id = ?',
+        whereArgs: [id],
+      );
+      await txn.delete(_custom, where: 'id = ?', whereArgs: [id]);
+    });
+  }
+
+  @override
+  Future<void> addToCustomCategory(int id, Iterable<String> keys) {
+    return _db.transaction((txn) async {
+      final result = await txn.rawQuery(
+        'SELECT COALESCE(MAX(position), -1) + 1 AS next '
+        'FROM $_customChannels WHERE category_id = ?',
+        [id],
+      );
+      var position = result.first['next'] as int;
+      final batch = txn.batch();
+      for (final key in keys) {
+        batch.insert(_customChannels, {
+          'category_id': id,
+          'channel_key': key,
+          'position': position++,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      }
+      await batch.commit(noResult: true);
+    });
+  }
+
+  @override
+  Future<void> removeFromCustomCategory(int id, Iterable<String> keys) {
+    return _db.transaction((txn) async {
+      await _forChunks(keys.toList(), (chunk, marks) async {
+        await txn.delete(
+          _customChannels,
+          where: 'category_id = ? AND channel_key IN ($marks)',
+          whereArgs: [id, ...chunk],
+        );
+      });
+    });
   }
 
   @override
@@ -264,66 +427,66 @@ class SqfliteChannelRepository implements ChannelRepository {
         );
         updated++;
       }
-      var position = nextPosition[channel.key] ?? 0;
-      for (final url in channel.urls) {
-        batch.insert(_sources, {
-          'channel_key': channel.key,
-          'position': position++,
-          'url': url,
-          'playlist_id': playlistId,
-        }, conflictAlgorithm: ConflictAlgorithm.ignore);
-      }
-      nextPosition[channel.key] = position;
+      final first = nextPosition[channel.key] ?? 0;
+      _insertSources(batch, channel, first, playlistId);
+      nextPosition[channel.key] = first + channel.sources.length;
     }
     await batch.commit(noResult: true);
     return ImportResult(added: added, updated: updated);
   }
 
-  Future<void> _delete(Transaction txn, List<String> keys) async {
-    if (keys.isEmpty) {
-      return;
+  void _insertSources(
+    Batch batch,
+    Channel channel,
+    int firstPosition,
+    int? playlistId,
+  ) {
+    var position = firstPosition;
+    for (final source in channel.sources) {
+      batch.insert(_sources, {
+        'channel_key': channel.key,
+        'position': position++,
+        'url': source.url,
+        'user_agent': source.userAgent,
+        'referrer': source.referrer,
+        'playlist_id': playlistId,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
-    // Chunks stay below SQLite's limit of host parameters.
-    for (var i = 0; i < keys.length; i += 500) {
-      final chunk = keys.sublist(i, (i + 500).clamp(0, keys.length));
-      final marks = List.filled(chunk.length, '?').join(',');
+  }
+
+  Future<void> _delete(Transaction txn, List<String> keys) async {
+    await _forChunks(keys, (chunk, marks) async {
       await txn.delete(
         _sources,
         where: 'channel_key IN ($marks)',
         whereArgs: chunk,
       );
+      await txn.delete(
+        _customChannels,
+        where: 'channel_key IN ($marks)',
+        whereArgs: chunk,
+      );
       await txn.delete(_channels, where: 'key IN ($marks)', whereArgs: chunk);
+    });
+  }
+
+  /// Runs [action] on chunks small enough for SQLite's limit of host
+  /// parameters, with the matching `?,?,...` list.
+  static Future<void> _forChunks(
+    List<String> keys,
+    Future<void> Function(List<String> chunk, String marks) action,
+  ) async {
+    for (var i = 0; i < keys.length; i += 500) {
+      final chunk = keys.sublist(i, (i + 500).clamp(0, keys.length));
+      await action(chunk, List.filled(chunk.length, '?').join(','));
     }
   }
 
   Future<void> _deleteChannelsWithoutSources(Transaction txn) async {
-    await txn.execute(
-      'DELETE FROM $_channels WHERE key NOT IN '
-      '(SELECT DISTINCT channel_key FROM $_sources)',
-    );
-  }
-
-  Future<void> _appendSources(
-    Transaction txn,
-    Channel channel,
-    int? playlistId,
-  ) async {
-    final result = await txn.rawQuery(
-      'SELECT COALESCE(MAX(position), -1) AS last FROM $_sources '
-      'WHERE channel_key = ?',
-      [channel.key],
-    );
-    var position = (result.first['last'] as int) + 1;
-    final batch = txn.batch();
-    for (final url in channel.urls) {
-      batch.insert(_sources, {
-        'channel_key': channel.key,
-        'position': position++,
-        'url': url,
-        'playlist_id': playlistId,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-    }
-    await batch.commit(noResult: true);
+    const orphan =
+        'NOT IN (SELECT DISTINCT channel_key FROM ${ChannelDatabase.sources})';
+    await txn.execute('DELETE FROM $_customChannels WHERE channel_key $orphan');
+    await txn.execute('DELETE FROM $_channels WHERE key $orphan');
   }
 
   static Map<String, Object?> _channelRow(Channel channel) {

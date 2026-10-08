@@ -99,26 +99,78 @@ class _PlayerViewState extends State<PlayerView> {
                 duration: const Duration(milliseconds: 200),
                 child: IgnorePointer(
                   ignoring: !_controlsVisible,
-                  child: _ControlBar(
-                    controller: player,
-                    isFullscreen: widget.isFullscreen,
-                    onToggleFullscreen: () {
-                      widget.onToggleFullscreen();
-                      _scheduleHide();
-                    },
-                    onTogglePlay: () {
-                      player.togglePlay();
-                      _scheduleHide();
-                    },
-                    onNextSource: () {
-                      player.nextSource();
-                      _scheduleHide();
-                    },
-                    onShowChannels: widget.onShowChannels,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Obx(() {
+                        final status = player.status.value;
+                        if (status != PlaybackStatus.playing &&
+                            status != PlaybackStatus.paused) {
+                          return const SizedBox.shrink();
+                        }
+                        return Center(
+                          child: _CenterPlayButton(
+                            playing: status == PlaybackStatus.playing,
+                            onPressed: () {
+                              player.togglePlay();
+                              _scheduleHide();
+                            },
+                          ),
+                        );
+                      }),
+                      _ControlBar(
+                        controller: player,
+                        isFullscreen: widget.isFullscreen,
+                        onToggleFullscreen: () {
+                          widget.onToggleFullscreen();
+                          _scheduleHide();
+                        },
+                        onTogglePlay: () {
+                          player.togglePlay();
+                          _scheduleHide();
+                        },
+                        onNextSource: () {
+                          player.nextSource();
+                          _scheduleHide();
+                        },
+                        onShowChannels: widget.onShowChannels,
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Large play / pause button in the middle of the video.
+class _CenterPlayButton extends StatelessWidget {
+  final bool playing;
+  final VoidCallback onPressed;
+
+  const _CenterPlayButton({required this.playing, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black45,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: Tooltip(
+          message: playing ? 'Pause' : 'Play',
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Icon(
+              playing ? Icons.pause : Icons.play_arrow,
+              size: 48,
+              color: Colors.white,
+            ),
           ),
         ),
       ),
@@ -245,9 +297,15 @@ class _ControlBar extends StatelessWidget {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 24, 4, 4),
-          child: IconTheme(
-            data: const IconThemeData(color: Colors.white),
+          padding: const EdgeInsets.fromLTRB(8, 32, 8, 8),
+          child: IconButtonTheme(
+            data: IconButtonThemeData(
+              style: IconButton.styleFrom(
+                foregroundColor: Colors.white,
+                iconSize: 32,
+                minimumSize: const Size.square(52),
+              ),
+            ),
             child: Row(
               children: [
                 if (onShowChannels != null)
@@ -276,6 +334,7 @@ class _ControlBar extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
+                        fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -287,7 +346,12 @@ class _ControlBar extends StatelessWidget {
                     return const SizedBox.shrink();
                   }
                   return TextButton.icon(
-                    style: TextButton.styleFrom(foregroundColor: Colors.white),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      iconSize: 28,
+                      textStyle: const TextStyle(fontSize: 16),
+                      minimumSize: const Size(64, 52),
+                    ),
                     onPressed: onNextSource,
                     icon: const Icon(Icons.swap_horiz),
                     label: Text('${controller.sourceIndex.value + 1}/$count'),
