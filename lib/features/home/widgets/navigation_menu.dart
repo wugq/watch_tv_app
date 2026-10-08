@@ -6,6 +6,7 @@ import 'package:tv/data/models/channel.dart';
 import 'package:tv/features/home/home_controller.dart';
 import 'package:tv/features/home/library_section.dart';
 import 'package:tv/features/home/widgets/channel_actions.dart';
+import 'package:tv/features/home/widgets/channel_tile.dart';
 
 /// Two-level menu for wide screens, like a desktop start menu.
 ///
@@ -317,6 +318,7 @@ class _NavigationMenuState extends State<NavigationMenu> {
                         key: ValueKey(searching ? 'search' : section),
                         controller: _panelScroll,
                         padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+                        prototypeItem: ChannelTile.prototype,
                         itemCount: channels.length,
                         itemBuilder: (context, index) {
                           final channel = channels[index];

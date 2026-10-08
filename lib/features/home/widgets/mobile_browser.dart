@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:tv/features/home/home_controller.dart';
 import 'package:tv/features/home/library_section.dart';
 import 'package:tv/features/home/widgets/channel_actions.dart';
+import 'package:tv/features/home/widgets/channel_tile.dart';
 
 /// Channel browser for narrow screens: a row of section chips (level 1)
 /// above the channel list (level 2). The grid button opens all categories
@@ -34,6 +35,7 @@ class MobileBrowser extends StatelessWidget {
                 ? _EmptySection(section: section, searching: searching)
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(8, 4, 8, 24),
+                    prototypeItem: ChannelTile.prototype,
                     itemCount: channels.length,
                     itemBuilder: (context, index) {
                       final channel = channels[index];

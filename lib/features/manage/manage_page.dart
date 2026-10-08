@@ -638,6 +638,14 @@ class _ChannelsTabState extends State<_ChannelsTab> {
               child: ListView.builder(
                 controller: _scroll,
                 padding: const EdgeInsets.only(bottom: 96),
+                // Fixed row height: jumping far (dragging the scrollbar
+                // through thousands of channels) stays instant.
+                prototypeItem: _ChannelRow(
+                  channel: _ChannelRow.prototypeChannel,
+                  selecting: selecting,
+                  selected: false,
+                  controller: controller,
+                ),
                 itemCount: channels.length,
                 itemBuilder: (context, index) => _ChannelRow(
                   channel: channels[index],
@@ -703,6 +711,13 @@ class _ChannelRow extends StatelessWidget {
   final bool selecting;
   final bool selected;
   final ManageController controller;
+
+  static final prototypeChannel = Channel(
+    key: 'prototype',
+    name: 'Prototype',
+    category: 'Category',
+    urls: const ['http://example.com/a'],
+  );
 
   const _ChannelRow({
     required this.channel,

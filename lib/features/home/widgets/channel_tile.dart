@@ -37,6 +37,25 @@ class ChannelTile extends StatelessWidget {
     this.showCategory = true,
   });
 
+  /// A tile with every line filled, for `ListView.prototypeItem`. Long
+  /// lists need a fixed row height: without it, jumping far (dragging the
+  /// scrollbar) lays out every row in between.
+  static final prototype = ChannelTile(
+    channel: Channel(
+      key: 'prototype',
+      name: 'Prototype',
+      category: 'Category',
+      urls: const ['http://example.com/a', 'http://example.com/b'],
+    ),
+    isPlaying: false,
+    onTap: _noop,
+    onToggleFavorite: _noop,
+    onEdit: _noop,
+    onDelete: _noop,
+  );
+
+  static void _noop() {}
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

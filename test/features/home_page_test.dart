@@ -328,6 +328,30 @@ void main() {
       await settleSnackbars(tester);
     });
 
+    testWidgets('long lists have a fixed row height', (tester) async {
+      // Without it, dragging the scrollbar through thousands of channels
+      // lays out every row in between and the app stops responding.
+      await pumpApp(tester, [alpha, beta]);
+      ListView channelList() => tester.widget<ListView>(
+        find
+            .descendant(
+              of: find.byType(MobileBrowser),
+              matching: find.byType(ListView),
+            )
+            .last,
+      );
+      expect(channelList().prototypeItem, isNotNull);
+
+      await tester.tap(find.byTooltip('Manage library'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Channels'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<ListView>(find.byType(ListView).last).prototypeItem,
+        isNotNull,
+      );
+    });
+
     testWidgets('a User-Agent can be set for a source', (tester) async {
       await pumpApp(tester, [alpha]);
 
