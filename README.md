@@ -198,7 +198,7 @@ The logo is downloaded from [flaticon](https://www.flaticon.com/)
 
 - [x] support tablet (side-by-side layout on wide screens)
 
-- [ ] support TV (D-pad navigation; arrow keys already switch channels)
+- [ ] LG webOS TV app with remote control navigation, see [docs/backlog.md](docs/backlog.md)
 
 - [x] support desktop (macOS, Windows, Linux)
 
