@@ -50,3 +50,9 @@ flutter_launcher_icons:
     generate: true
     image_path: "assets/icon/logo.png"
   image_path: "assets/icon/logo.png"
+
+# Patched copy of media_kit_video 2.0.1 (MIT): hardware video rendering on
+# Linux with current Flutter versions. See third_party/media_kit_video/PATCHES.md.
+dependency_overrides:
+  media_kit_video:
+    path: third_party/media_kit_video
